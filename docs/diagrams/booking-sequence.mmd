@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant U as User (Browser)
+    participant N as Next.js Server
+    participant S as Supabase (DB/Auth)
+    participant E as Email Service
+
+    U->>N: Open booking page / select service
+    N->>S: Query services & available slots
+    S-->>N: Return slots
+    N-->>U: Render available slots
+    U->>N: Submit booking (customer details, slot)
+    N->>S: Begin transaction: verify slot still available
+    S-->>N: slot available
+    N->>S: Insert booking, mark slot locked
+    S-->>N: Booking created
+    N->>E: Send confirmation email
+    E-->>U: Email delivered
+    N-->>U: Show booking confirmation

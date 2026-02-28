@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mermaid SVG placeholder: System Architecture -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="400">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="20" y="40" font-family="Arial" font-size="18" fill="#111827">System Architecture (visual placeholder)</text>
+  <text x="20" y="70" font-family="Arial" font-size="13" fill="#374151">This folder contains SVG exports of Mermaid diagrams. If you need fully styled SVGs exported from Mermaid, run a renderer locally or use the Mermaid CLI.</text>
+</svg>

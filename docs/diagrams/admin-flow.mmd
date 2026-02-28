@@ -1,0 +1,24 @@
+flowchart TD
+  A[Admin logs in] --> B[Admin Dashboard]
+  B --> C[Services]
+  B --> D[Therapists]
+  B --> E[Schedule]
+  B --> F[Bookings]
+  B --> G[Messages]
+
+  C --> C1[List services]
+  C1 --> C2[Create / Edit service]
+  C1 --> C3[Toggle active]
+
+  D --> D1[List therapists]
+  D1 --> D2[Create / Edit therapist]
+  D1 --> D3[Toggle active]
+
+  E --> E1[List time slots]
+  E1 --> E2[Create time slot]
+
+  F --> F1[List bookings]
+  F1 --> F2[Update status / assign therapist]
+
+  G --> G1[List messages]
+  G1 --> G2[Mark read/unread]
