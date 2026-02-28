@@ -116,10 +116,11 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
           return;
         }
 
-        const therapistsList: Therapist[] =
-          (data ?? [])
-            .map((row: any) => row.therapists)
-            .filter((t: any) => t && t.is_active) ?? [];
+        type RawTherapistRow = { therapists: Therapist & { is_active?: boolean } };
+        const rows = (data ?? []) as unknown as RawTherapistRow[];
+        const therapistsList = rows
+          .map((row) => row.therapists)
+          .filter((t): t is Therapist => Boolean(t && t.is_active));
 
         setTherapists(therapistsList);
         setSelectedTherapistId(therapistsList[0]?.id ?? null);
@@ -223,10 +224,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
       const body = await response.json();
 
       if (!response.ok) {
-        logger.warn("Lock API failed", null, {
-          status: response.status,
-          body,
-        });
+        logger.warn("Lock API failed", { status: response.status, body });
 
         if (body.code === "SLOT_TAKEN") {
           setError(

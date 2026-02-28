@@ -4,7 +4,7 @@ import { logger } from "@/lib/utils/logger";
 
 export async function POST() {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { error } = await supabase.auth.signOut();
 

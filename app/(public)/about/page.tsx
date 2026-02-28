@@ -11,7 +11,7 @@ type Therapist = {
 
 async function getTherapists(): Promise<Therapist[]> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { data, error } = await supabase
       .from("therapists")

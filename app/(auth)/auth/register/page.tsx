@@ -56,7 +56,7 @@ export default function RegisterPage() {
 
     const parsed = registerSchema.safeParse(state.values);
     if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message ?? "Invalid input.";
+      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
       setState((prev) => ({
         ...prev,
         error: firstError,

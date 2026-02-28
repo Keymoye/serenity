@@ -35,7 +35,7 @@ export async function PATCH(request: Request) {
 
     const payload: ProfileUpdateInput = parsed.data;
 
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { error } = await supabase
       .from("profiles")

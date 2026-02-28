@@ -1,51 +1,37 @@
-import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { logger } from "../utils/logger";
 
-let cachedClient: SupabaseClient | null = null;
-
-export function getServerSupabaseClient(): SupabaseClient {
-  if (cachedClient) return cachedClient;
-
+export async function getServerSupabaseClient(): Promise<SupabaseClient> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !serviceRoleKey) {
     logger.error("Supabase server env vars missing", null, {
       hasUrl: Boolean(supabaseUrl),
-      hasServiceKey: Boolean(serviceKey),
+      hasServiceRoleKey: Boolean(serviceRoleKey),
     });
     throw new Error("Supabase server environment variables are not configured");
   }
 
-  try {
-    const cookieStore = cookies();
-    const headerStore = headers();
+  const cookieStore = await cookies();
 
-    cachedClient = createServerClient(supabaseUrl, serviceKey, {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        },
+  const client = createServerClient(supabaseUrl, serviceRoleKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
       },
-      headers: {
-        get(name: string) {
-          return headerStore.get(name) ?? undefined;
-        },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // The `setAll` call may happen in a context where cookies are read-only.
+          // Swallow errors — middleware/session refresh can handle updates if needed.
+        }
       },
-    });
+    },
+  });
 
-    return cachedClient;
-  } catch (error) {
-    logger.error("Failed to create Supabase server client", error);
-    throw error;
-  }
+  return client;
 }
-

@@ -20,44 +20,44 @@ export interface CurrentUser {
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      logger.error("Failed to get Supabase session", sessionError);
+    if (userError) {
+      logger.error("Failed to get authenticated user", userError);
       return null;
     }
 
-    if (!session?.user) return null;
+    if (!user) return null;
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (profileError) {
       logger.error("Error loading profile", profileError, {
-        userId: session.user.id,
+        userId: user.id,
       });
       return null;
     }
 
     if (!profile) {
       logger.warn("Profile not found for authenticated user", {
-        userId: session.user.id,
+        userId: user.id,
       });
       return null;
     }
 
     return {
-      user: session.user,
+      user,
       profile: profile as AppProfile,
-    };
+};
   } catch (error) {
     logger.error("Unexpected error in getCurrentUser", error);
     return null;

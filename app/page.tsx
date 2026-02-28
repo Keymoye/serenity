@@ -2,10 +2,11 @@ import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import { MapEmbed } from "@/components/MapEmbed";
+import Link from "next/link";
 
 async function getFeaturedServices(): Promise<ServiceSummary[]> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { data, error } = await supabase
       .from("services")
@@ -48,18 +49,18 @@ export default async function Home() {
             peaceful escape in the heart of the city.
           </p>
           <div className="flex flex-wrap gap-3 text-sm">
-            <a
+            <Link
               href="/book"
               className="inline-flex items-center justify-center rounded-full bg-sky-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700"
             >
               Book now
-            </a>
-            <a
+            </Link>
+            <Link
               href="/services"
               className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-800 hover:bg-white"
             >
               Explore services
-            </a>
+            </Link>
           </div>
           <dl className="mt-4 grid gap-4 text-xs text-slate-700 sm:grid-cols-3">
             <div>
@@ -105,12 +106,9 @@ export default async function Home() {
               Our most-loved treatments, curated by our therapists.
             </p>
           </div>
-          <a
-            href="/services"
-            className="text-xs font-medium text-sky-700 hover:underline"
-          >
+          <Link href="/services" className="text-xs font-medium text-sky-700 hover:underline">
             View all services
-          </a>
+          </Link>
         </div>
 
         {featuredServices.length === 0 ? (
@@ -143,12 +141,9 @@ export default async function Home() {
             therapists blend traditional techniques with modern modalities to
             help you reset from the inside out.
           </p>
-          <a
-            href="/about"
-            className="inline-flex items-center text-sm font-medium text-sky-700 hover:underline"
-          >
+          <Link href="/about" className="inline-flex items-center text-sm font-medium text-sky-700 hover:underline">
             Read our story
-          </a>
+          </Link>
         </div>
 
         <MapEmbed

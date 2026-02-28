@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     const payload: BookingConfirmInput = parsed.data;
 
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     // Basic guard to ensure slot is still available by checking for existing bookings.
     const { data: existingBooking, error: existingError } = await supabase

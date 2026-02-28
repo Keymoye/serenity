@@ -10,7 +10,7 @@ type Metrics = {
 
 async function getAdminMetrics(): Promise<Metrics> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -67,9 +67,11 @@ async function getAdminMetrics(): Promise<Metrics> {
       logger.error("Failed to load unreadMessages metric", messagesError);
     }
 
+    type BookingRow = { time_slots?: { start_time?: string } };
     const upcomingToday =
-      (todaysBookings ?? []).filter((b: any) => b.time_slots?.start_time)
-        .length ?? 0;
+      ((todaysBookings ?? []) as BookingRow[]).filter(
+        (b) => Boolean(b.time_slots && b.time_slots.start_time)
+      ).length ?? 0;
 
     return {
       bookingsThisMonth: bookingsThisMonthCount ?? 0,

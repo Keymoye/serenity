@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getCurrentUser } from "@/lib/services/authService";
@@ -35,66 +36,66 @@ export default async function RootLayout({
       >
         <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <a href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <span className="text-base font-semibold tracking-tight">
                 Serenity Spa
               </span>
-            </a>
+            </Link>
 
             <nav className="hidden items-center gap-4 text-sm text-slate-700 md:flex">
-              <a href="/" className="hover:text-sky-700">
+              <Link href="/" className="hover:text-sky-700">
                 Home
-              </a>
-              <a href="/services" className="hover:text-sky-700">
+              </Link>
+              <Link href="/services" className="hover:text-sky-700">
                 Services
-              </a>
-              <a href="/about" className="hover:text-sky-700">
+              </Link>
+              <Link href="/about" className="hover:text-sky-700">
                 About
-              </a>
-              <a href="/contact" className="hover:text-sky-700">
+              </Link>
+              <Link href="/contact" className="hover:text-sky-700">
                 Contact
-              </a>
+              </Link>
             </nav>
 
             <div className="flex items-center gap-2 text-xs md:text-sm">
               {isAuthenticated ? (
                 <>
-                  <a
+                  <Link
                     href="/dashboard"
                     className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
                   >
                     Dashboard
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/profile"
                     className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
                   >
                     Profile
-                  </a>
+                  </Link>
                   {isAdmin && (
-                    <a
+                    <Link
                       href="/admin"
                       className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
                     >
                       Admin
-                    </a>
+                    </Link>
                   )}
                   <LogoutButton />
                 </>
               ) : (
                 <>
-                  <a
+                  <Link
                     href="/auth/login"
                     className="rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100"
                   >
                     Login
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/auth/register"
                     className="hidden rounded-full bg-sky-600 px-3 py-1 font-medium text-white shadow-sm hover:bg-sky-700 md:inline-block"
                   >
                     Sign up
-                  </a>
+                  </Link>
                 </>
               )}
             </div>

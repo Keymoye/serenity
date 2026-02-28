@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     // Validate that the therapist is linked to the service.
     const { data: link, error: linkError } = await supabase

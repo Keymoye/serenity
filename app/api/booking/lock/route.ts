@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const nowIso = new Date().toISOString();

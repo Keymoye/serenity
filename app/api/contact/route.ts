@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const payload: ContactFormInput = parsed.data;
     const ip = getClientIp(request) ?? "unknown";
 
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     // Rate limiting: count submissions from same IP in the last hour.
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();

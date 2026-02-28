@@ -39,7 +39,7 @@ async function getServiceDetail(
   therapists: Therapist[];
 }> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { data: service, error: serviceError } = await supabase
       .from("services")
@@ -82,10 +82,13 @@ async function getServiceDetail(
       });
     }
 
-    const therapists: Therapist[] =
-      (therapistRows ?? [])
-        .map((row: any) => row.therapists)
-        .filter(Boolean) ?? [];
+    type RawTherapistRow = { therapists?: Therapist | null };
+    const therapists: Therapist[] = (
+      (therapistRows ?? []) as unknown as RawTherapistRow[]
+    )
+      .map((row) => row.therapists)
+      .filter((t): t is Therapist => Boolean(t))
+      .map((t) => t as Therapist);
 
     return {
       service: service as ServiceDetail,
@@ -107,9 +110,6 @@ export default async function ServiceDetailPage({
   if (!service) {
     notFound();
   }
-
-  const heroImage =
-    images && images.length > 0 ? images[0].image_url : service.thumbnail_url;
 
   return (
     <div className="space-y-8">

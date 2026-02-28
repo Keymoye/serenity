@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/utils/logger";
 
@@ -19,7 +19,7 @@ export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -40,11 +40,11 @@ export default function AdminMessagesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    loadMessages();
-  }, []);
+    void loadMessages();
+  }, [loadMessages]);
 
   const toggleRead = async (msg: MessageRow) => {
     try {

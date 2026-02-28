@@ -1,6 +1,7 @@
 import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
+import Link from "next/link";
 
 type ServicesPageProps = {
   searchParams: {
@@ -10,7 +11,7 @@ type ServicesPageProps = {
 
 async function getServices(category?: string): Promise<ServiceSummary[]> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     let query = supabase
       .from("services")
@@ -66,7 +67,7 @@ export default async function ServicesPage({ searchParams }: ServicesPageProps) 
 
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          <a
+          <Link
             href="/services"
             className={`rounded-full border px-3 py-1 text-xs font-medium ${
               !category
@@ -75,11 +76,11 @@ export default async function ServicesPage({ searchParams }: ServicesPageProps) 
             }`}
           >
             All
-          </a>
+          </Link>
           {categories.map((cat) => {
             const isActive = category === cat;
             return (
-              <a
+              <Link
                 key={cat}
                 href={`/services?category=${encodeURIComponent(cat)}`}
                 className={`rounded-full border px-3 py-1 text-xs font-medium ${
@@ -89,7 +90,7 @@ export default async function ServicesPage({ searchParams }: ServicesPageProps) 
                 }`}
               >
                 {cat}
-              </a>
+              </Link>
             );
           })}
         </div>

@@ -7,20 +7,14 @@ type BookingRow = {
   status: string;
   reference_code: string | null;
   notes: string | null;
-  time_slots: {
-    start_time: string;
-  } | null;
-  services: {
-    name: string;
-  } | null;
-  therapists: {
-    name: string;
-  } | null;
+  time_slots: { start_time: string }[] | null;
+  services: { name: string }[] | null;
+  therapists: { name: string }[] | null;
 };
 
 async function getCustomerBookings(profileId: string): Promise<BookingRow[]> {
   try {
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabaseClient();
 
     const { data, error } = await supabase
       .from("bookings")
@@ -35,7 +29,7 @@ async function getCustomerBookings(profileId: string): Promise<BookingRow[]> {
       return [];
     }
 
-    return (data ?? []) as BookingRow[];
+    return (data ?? []) as unknown as BookingRow[];
   } catch (error) {
     logger.error("Unexpected error while loading customer bookings", error, {
       profileId,
@@ -58,8 +52,8 @@ export default async function DashboardPage() {
   const past: BookingRow[] = [];
 
   for (const booking of bookings) {
-    const start = booking.time_slots?.start_time
-      ? new Date(booking.time_slots.start_time)
+    const start = booking.time_slots?.[0]?.start_time
+      ? new Date(booking.time_slots[0].start_time)
       : null;
     if (start && start >= now) {
       upcoming.push(booking);
@@ -110,8 +104,8 @@ export default async function DashboardPage() {
     return (
       <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         {items.map((booking) => {
-          const start = booking.time_slots?.start_time
-            ? new Date(booking.time_slots.start_time)
+          const start = booking.time_slots?.[0]?.start_time
+            ? new Date(booking.time_slots[0].start_time)
             : null;
 
           return (
@@ -121,11 +115,11 @@ export default async function DashboardPage() {
             >
               <div>
                 <p className="font-medium">
-                  {booking.services?.name ?? "Service"}
+                  {booking.services?.[0]?.name ?? "Service"}
                 </p>
                 <p className="text-xs text-slate-600">
-                  {booking.therapists?.name
-                    ? `With ${booking.therapists.name}`
+                  {booking.therapists?.[0]?.name
+                    ? `With ${booking.therapists[0].name}`
                     : "Therapist TBA"}
                 </p>
                 {start && (

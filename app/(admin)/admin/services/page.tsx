@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   adminServiceSchema,
@@ -43,7 +43,7 @@ export default function AdminServicesPage() {
     isSubmitting: false,
   });
 
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -64,11 +64,11 @@ export default function AdminServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    loadServices();
-  }, []);
+    void loadServices();
+  }, [loadServices]);
 
   const handleToggleActive = async (service: ServiceRow) => {
     try {
@@ -101,7 +101,7 @@ export default function AdminServicesPage() {
           : event.target.value;
       setForm((prev) => ({
         ...prev,
-        values: { ...prev.values, [field]: value as any },
+        values: { ...(prev.values as Record<string, unknown>), [field]: value } as AdminServiceInput,
       }));
     };
 
@@ -116,7 +116,7 @@ export default function AdminServicesPage() {
 
     const parsed = adminServiceSchema.safeParse(form.values);
     if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message ?? "Invalid input.";
+      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
       setForm((prev) => ({
         ...prev,
         error: firstError,
