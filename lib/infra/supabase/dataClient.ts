@@ -1,9 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { logger } from "../utils/logger";
+import { logger } from "../../utils/logger";
 
-export async function getServerSupabaseClient(): Promise<SupabaseClient> {
+export type SupabaseDataClient = SupabaseClient;
+
+export async function getSupabaseDataClient(): Promise<SupabaseDataClient> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

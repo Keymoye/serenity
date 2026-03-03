@@ -1,5 +1,6 @@
 import type { Therapist } from "../../domain/therapist.types";
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface TherapistRepository {
   listTherapists(): Promise<Therapist[]>;
@@ -25,7 +26,7 @@ export interface TherapistRepository {
 export function createTherapistRepository(): TherapistRepository {
   return {
     async listTherapists() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("therapists")
         .select("*")
@@ -35,7 +36,7 @@ export function createTherapistRepository(): TherapistRepository {
     },
 
     async listActiveTherapists() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("therapists")
         .select("id, name, title, photo_url, bio_short, is_active")
@@ -48,7 +49,7 @@ export function createTherapistRepository(): TherapistRepository {
     async createTherapist(
       payload: Omit<Therapist, "id" | "created_at">,
     ): Promise<Therapist> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("therapists")
         .insert(payload)
@@ -62,7 +63,7 @@ export function createTherapistRepository(): TherapistRepository {
       id: string,
       payload: Partial<Omit<Therapist, "id" | "created_at">>,
     ): Promise<Therapist> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("therapists")
         .update(payload)
@@ -74,7 +75,7 @@ export function createTherapistRepository(): TherapistRepository {
     },
 
     async deleteTherapist(id: string): Promise<void> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("therapists").delete().eq("id", id);
       if (error) throw error;
     },

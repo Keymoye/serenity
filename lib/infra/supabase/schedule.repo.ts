@@ -1,5 +1,5 @@
-import type { ScheduleItem } from "../../db/schedule";
-import { getSupabaseServerClient } from "./client";
+import type { ScheduleItem } from "../db/schedule";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface ScheduleRepository {
   listSchedule(): Promise<ScheduleItem[]>;
@@ -14,7 +14,7 @@ export interface ScheduleRepository {
 export function createScheduleRepository(): ScheduleRepository {
   return {
     async listSchedule() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("schedules")
         .select("*")
@@ -24,7 +24,7 @@ export function createScheduleRepository(): ScheduleRepository {
     },
 
     async createSchedule(payload: ScheduleItem): Promise<ScheduleItem> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("schedules")
         .insert(payload)
@@ -38,7 +38,7 @@ export function createScheduleRepository(): ScheduleRepository {
       id: string,
       payload: Partial<ScheduleItem>,
     ): Promise<ScheduleItem> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("schedules")
         .update(payload)
@@ -50,7 +50,7 @@ export function createScheduleRepository(): ScheduleRepository {
     },
 
     async deleteSchedule(id: string): Promise<void> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("schedules").delete().eq("id", id);
       if (error) throw error;
     },

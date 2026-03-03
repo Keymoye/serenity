@@ -1,5 +1,5 @@
 import React from "react";
-import { getCurrentUser } from "@/lib/services/authService";
+import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { listAdminBookingRows } from "@/lib/application/admin.service";
 
 export default async function BookingsAdminPage() {

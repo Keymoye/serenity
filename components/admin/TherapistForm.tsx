@@ -1,9 +1,15 @@
 "use client";
 import React, { useState } from "react";
-import type { Therapist } from "@/lib/db/therapists";
+
+type TherapistInput = {
+  id?: string;
+  name?: string;
+  bio?: string | null;
+  [key: string]: unknown;
+};
 
 type Props = {
-  initial?: Therapist | null;
+  initial?: TherapistInput | null;
 };
 
 export default function TherapistForm({ initial }: Props) {

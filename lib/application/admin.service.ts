@@ -1,5 +1,6 @@
 import type { Service } from "../domain/service.types";
 import type { Therapist } from "../domain/therapist.types";
+import type { TimeSlot } from "../domain/timeSlot.types";
 import type { AdminServiceInput, AdminTherapistInput, AdminBookingStatusInput } from "../domain/admin.types";
 import { ValidationError, UnauthorizedError } from "../domain/errors";
 import { createServiceRepository } from "../infra/supabase/service.repo";
@@ -207,7 +208,7 @@ export async function deleteBookingAdmin(
 export async function listTimeSlotsAdmin(
   context: AdminContext,
   deps: AdminDependencies = createDefaultDeps(),
-) {
+): Promise<TimeSlot[]> {
   assertAdmin(context);
   return deps.timeSlotRepo.listTimeSlots();
 }

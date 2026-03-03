@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import type { Booking } from "../../lib/db/bookings";
+import type { Booking } from "@/lib/domain/booking.types";
 
 export default function BookingRow({ booking }: { booking: Partial<Booking> & { id?: string } }) {
   const [status, setStatus] = useState<string>(booking.status ?? "pending");

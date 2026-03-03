@@ -7,6 +7,7 @@ import { listBookingServices } from "@/lib/application/service.service";
 export async function GET() {
   const correlationId = randomUUID();
   const log = logger.withContext({ correlationId, route: "services.GET" });
+  
 
   try {
     const services = await listBookingServices();

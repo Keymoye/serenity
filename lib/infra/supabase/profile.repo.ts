@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
 
 export interface ProfileRepository {
   updateProfile(profileId: string, payload: { name: string; phone: string | null }): Promise<void>;
@@ -7,7 +7,7 @@ export interface ProfileRepository {
 export function createProfileRepository(): ProfileRepository {
   return {
     async updateProfile(profileId, payload) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { error } = await supabase
         .from("profiles")
         .update({

@@ -1,5 +1,5 @@
 import type { TimeSlot } from "../../domain/timeSlot.types";
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface TimeSlotRepository {
   findById(id: string): Promise<TimeSlot | null>;
@@ -14,7 +14,7 @@ export interface TimeSlotRepository {
 export function createTimeSlotRepository(): TimeSlotRepository {
   return {
     async findById(id) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("time_slots")
         .select("id, therapist_id, start_time, end_time, is_available, locked_until")
@@ -25,7 +25,7 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     },
 
     async findForTherapistOnDate(therapistId, startOfDayIso, endOfDayIso) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("time_slots")
         .select("id, therapist_id, start_time, end_time, is_available, locked_until")
@@ -38,7 +38,7 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     },
 
     async listTimeSlots() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("time_slots")
         .select("id, therapist_id, start_time, end_time, is_available, locked_until")
@@ -48,13 +48,13 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     },
 
     async createTimeSlot(payload) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("time_slots").insert(payload);
       if (error) throw error;
     },
 
     async lockSlot(timeSlotId, lockUntilIso, nowIso) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("time_slots")
         .update({
@@ -70,7 +70,7 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     },
 
     async tryMarkAsBooked(timeSlotId) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("time_slots")
         .update({ is_available: false })
@@ -83,7 +83,7 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     },
 
     async setAvailable(timeSlotId) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase
         .from("time_slots")
         .update({ is_available: true })

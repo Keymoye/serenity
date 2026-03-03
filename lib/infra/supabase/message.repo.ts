@@ -1,4 +1,5 @@
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface MessageRepository {
   countMessagesFromIpSince(ip: string, sinceIso: string): Promise<number>;
@@ -28,7 +29,7 @@ export interface MessageRepository {
 export function createMessageRepository(): MessageRepository {
   return {
     async countMessagesFromIpSince(ip, sinceIso) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { count, error } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
@@ -39,13 +40,13 @@ export function createMessageRepository(): MessageRepository {
     },
 
     async insertContactMessage(payload) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { error } = await supabase.from("messages").insert(payload);
       if (error) throw error;
     },
 
     async listMessages() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("messages")
         .select("id, full_name, email, subject, message, is_read, created_at")
@@ -55,7 +56,7 @@ export function createMessageRepository(): MessageRepository {
     },
 
     async setMessageRead(messageId, isRead) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase
         .from("messages")
         .update({ is_read: isRead })
@@ -64,7 +65,7 @@ export function createMessageRepository(): MessageRepository {
     },
 
     async countUnreadMessages() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { count, error } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })

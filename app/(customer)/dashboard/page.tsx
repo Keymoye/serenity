@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/services/authService";
+import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { logger } from "@/lib/utils/logger";
 import { listCustomerBookings } from "@/lib/application/booking.service";
 

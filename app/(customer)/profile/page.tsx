@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/services/authService";
+import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { ProfileForm } from "./ProfileForm";
 
 export default async function ProfilePage() {

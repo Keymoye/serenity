@@ -1,5 +1,6 @@
 import type { Booking } from "../../domain/booking.types";
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface BookingRepository {
   listBookings(): Promise<Booking[]>;
@@ -36,7 +37,7 @@ export interface BookingRepository {
 export function createBookingRepository(): BookingRepository {
   return {
     async listBookings() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
@@ -46,7 +47,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async listAdminBookingRows() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .select("id, status, created_at, profiles(name)")
@@ -70,7 +71,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async countBookingsSince(sinceIso: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { count, error } = await supabase
         .from("bookings")
         .select("id", { count: "exact", head: true })
@@ -80,7 +81,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async countConfirmedBookingsWithSlotBetween(startIso: string, endIso: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .select("id, time_slots(start_time), status")
@@ -95,7 +96,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async listCustomerBookingRows(profileId: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("bookings")
         .select(
@@ -108,7 +109,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async findBookingIdByTimeSlotId(timeSlotId: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .select("id")
@@ -121,7 +122,7 @@ export function createBookingRepository(): BookingRepository {
     async createBooking(
       payload: Omit<Booking, "id" | "created_at">,
     ): Promise<Booking> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .insert(payload)
@@ -135,7 +136,7 @@ export function createBookingRepository(): BookingRepository {
       id: string,
       payload: Partial<Omit<Booking, "id" | "created_at">>,
     ): Promise<Booking> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
         .update(payload)
@@ -147,7 +148,7 @@ export function createBookingRepository(): BookingRepository {
     },
 
     async deleteBooking(id: string): Promise<void> {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("bookings").delete().eq("id", id);
       if (error) throw error;
     },

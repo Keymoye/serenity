@@ -1,5 +1,6 @@
 import type { Service } from "../../domain/service.types";
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface ServiceRepository {
   listActiveServices(): Promise<Service[]>;
@@ -55,7 +56,7 @@ export interface ServiceRepository {
 export function createServiceRepository(): ServiceRepository {
   return {
     async listActiveServices() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("services")
         .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
@@ -66,7 +67,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async listPublicServiceSummaries(category?: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       let query = supabase
         .from("services")
         .select("id, name, category, duration_minutes, price, thumbnail_url, is_active")
@@ -83,7 +84,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async getPublicServiceDetail(serviceId: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
 
       const { data: service, error: serviceError } = await supabase
         .from("services")
@@ -139,7 +140,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async listTherapistsForService(serviceId: string) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("therapist_service")
         .select("therapists(id, name, title, is_active)")
@@ -155,7 +156,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async listFeaturedServiceSummaries() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("services")
         .select(
@@ -169,7 +170,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async listAllServices() {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("services")
         .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
@@ -179,7 +180,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async createService(payload) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("services")
         .insert(payload)
@@ -190,7 +191,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async updateService(id, payload) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("services")
         .update(payload)
@@ -202,13 +203,13 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async deleteService(id) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("services").delete().eq("id", id);
       if (error) throw error;
     },
 
     async isTherapistAssignedToService(serviceId, therapistId) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("therapist_service")
         .select("id")

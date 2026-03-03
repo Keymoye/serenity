@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { adminTimeSlotCreateSchema } from "@/lib/domain/admin.types";
 import { listTimeSlotsAdmin, createTimeSlotAdmin } from "@/lib/application/admin.service";
 

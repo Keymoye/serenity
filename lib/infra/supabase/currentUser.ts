@@ -1,13 +1,13 @@
 import type { User } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 import { logger } from "../../utils/logger";
 import { getSupabaseServerAuthClient } from "./authClient";
-import { getSupabaseServerClient } from "./client";
+import { getSupabaseUserClient } from "./userClient";
 
 export type AppRole = "customer" | "admin";
 
 export interface AppProfile {
   id: string;
-  user_id: string;
   name: string | null;
   phone: string | null;
   role: AppRole;
@@ -34,11 +34,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
     if (!user) return null;
 
-    const supabase = await getSupabaseServerClient();
+    const supabase = await getSupabaseUserClient();
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
     if (profileError) {
@@ -61,5 +61,32 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     logger.error("Unexpected error in getCurrentUser", error);
     return null;
   }
+}
+
+export async function requireCustomer(): Promise<CurrentUser> {
+  const current = await getCurrentUser();
+  if (!current) {
+    logger.info("Unauthenticated access to customer-only route");
+    redirect("/auth/login");
+  }
+  return current;
+}
+
+export async function requireAdmin(): Promise<CurrentUser> {
+  const current = await getCurrentUser();
+  if (!current) {
+    logger.info("Unauthenticated access to admin route");
+    redirect("/");
+  }
+
+  if (current.profile.role !== "admin") {
+    logger.warn("Non-admin user attempted to access admin route", {
+      userId: current.user.id,
+      role: current.profile.role,
+    });
+    redirect("/");
+  }
+
+  return current;
 }
 
