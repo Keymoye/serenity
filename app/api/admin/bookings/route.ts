@@ -10,7 +10,7 @@ import {
 } from "@/lib/application/admin.service";
 import { adminBookingStatusSchema } from "@/lib/domain/admin.types";
 
-export async function GET() {
+export async function GET(req: Request) {
   const correlationId = randomUUID();
   const log = logger.withContext({ correlationId, route: "admin.bookings.GET" });
 
@@ -23,10 +23,40 @@ export async function GET() {
       );
     }
 
-    const rows = await listAdminBookingRows({
+    // fetch all rows first, then apply any filtering/pagination in-memory
+    let rows = await listAdminBookingRows({
       userId: current.user.id,
       role: current.profile.role,
     });
+
+    const urlObj = new URL(req.url);
+    // filter by created date range (ISO date strings)
+    const startDate = urlObj.searchParams.get("startDate");
+    const endDate = urlObj.searchParams.get("endDate");
+    if (startDate) {
+      const startIso = new Date(startDate);
+      rows = rows.filter(
+        (r) => r.created_at && new Date(r.created_at) >= startIso,
+      );
+    }
+    if (endDate) {
+      const endIso = new Date(endDate);
+      rows = rows.filter(
+        (r) => r.created_at && new Date(r.created_at) <= endIso,
+      );
+    }
+
+    // simple pagination support
+    const limitParam = urlObj.searchParams.get("limit");
+    const offsetParam = urlObj.searchParams.get("offset");
+    if (limitParam) {
+      const limitNum = parseInt(limitParam, 10);
+      const offsetNum = parseInt(offsetParam || "0", 10) || 0;
+      if (!isNaN(limitNum)) {
+        rows = rows.slice(offsetNum, offsetNum + limitNum);
+      }
+    }
+
     return NextResponse.json(rows);
   } catch (error) {
     log.error("GET /api/admin/bookings failed", error);
@@ -89,11 +119,11 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id");
-    if (!id) {
+    const body = await req.json();
+    const id = body?.bookingId || body?.id;
+    if (!id || typeof id !== "string") {
       return NextResponse.json(
-        { error: "Missing id", code: "VALIDATION_ERROR" },
+        { error: "Missing bookingId", code: "VALIDATION_ERROR" },
         { status: 400 },
       );
     }

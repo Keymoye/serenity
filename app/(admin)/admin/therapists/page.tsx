@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminTherapistSchema, type AdminTherapistInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
+import { apiFetch } from "@/lib/utils/api";
 
 type TherapistRow = {
   id: string;
@@ -30,14 +31,8 @@ export default function AdminTherapistsPage() {
   const loadTherapists = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/therapists");
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to load therapists", body);
-        return;
-      }
-      const data = await res.json();
-      setTherapists((data ?? []) as TherapistRow[]);
+      const data = await apiFetch<TherapistRow[]>("/api/admin/therapists");
+      setTherapists(data);
     } catch (err) {
       logger.error("Unexpected error loading therapists", err);
     } finally {
@@ -54,19 +49,7 @@ export default function AdminTherapistsPage() {
     setTherapists((prev) => prev.map((p) => (p.id === t.id ? { ...p, is_active: !p.is_active } : p)));
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/admin/therapists?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to delete therapist", body, { therapistId: id });
-        return;
-      }
-      setTherapists((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      logger.error("Unexpected error deleting therapist", err, { therapistId: id });
-    }
-  };
+
 
   const handleChange = (field: keyof AdminTherapistInput) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -84,7 +67,7 @@ export default function AdminTherapistsPage() {
     }
 
     try {
-      const res = await fetch("/api/admin/therapists", {
+      await apiFetch("/api/admin/therapists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -95,12 +78,6 @@ export default function AdminTherapistsPage() {
           is_active: parsed.data.is_active ?? true,
         }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to create therapist", body);
-        setForm((prev) => ({ ...prev, error: "Unable to create therapist.", isSubmitting: false }));
-        return;
-      }
       setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
       await loadTherapists();
     } catch (err) {

@@ -6,15 +6,9 @@ import {
   resetPasswordConfirmSchema,
   type ResetPasswordConfirmInput,
 } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
-
-type FormState = {
-  values: ResetPasswordConfirmInput;
-  error: string | null;
-  success: string | null;
-  isSubmitting: boolean;
-  isSessionReady: boolean;
-};
+// logger not used here
+import { postJson, useApi } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const INITIAL_VALUES: ResetPasswordConfirmInput = {
   password: "",
@@ -29,13 +23,11 @@ export default function ResetPasswordConfirmPage() {
     refresh_token: string;
   } | null>(null);
 
-  const [state, setState] = useState<FormState>({
-    values: INITIAL_VALUES,
-    error: null,
-    success: null,
-    isSubmitting: false,
-    isSessionReady: false,
-  });
+  const { loading, error, call, setError } = useApi();
+  const [values, setValues] = useState<ResetPasswordConfirmInput>(INITIAL_VALUES);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isSessionReady, setIsSessionReady] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
 
   // Validate the recovery link by checking for tokens in the URL hash.
   useEffect(() => {
@@ -45,107 +37,57 @@ export default function ResetPasswordConfirmPage() {
     const refresh_token = params.get("refresh_token") ?? "";
 
     if (!access_token || !refresh_token) {
-      setState((prev) => ({
-        ...prev,
-        error:
-          "This password reset link is invalid or has expired. Please request a new one.",
-        isSessionReady: false,
-      }));
+      setTokenError(
+        "This password reset link is invalid or has expired. Please request a new one."
+      );
+      setIsSessionReady(false);
       return;
     }
 
     setTokens({ access_token, refresh_token });
-    setState((prev) => ({
-      ...prev,
-      isSessionReady: true,
-    }));
+    setIsSessionReady(true);
   }, []);
 
   const handleChange =
     (field: keyof ResetPasswordConfirmInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [field]: value },
-      }));
+      setValues((v) => ({ ...v, [field]: event.target.value }));
     };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
+    setSuccess(null);
 
-    setState((prev) => ({
-      ...prev,
-      error: null,
-      success: null,
-      isSubmitting: true,
-    }));
-
-    const parsed = resetPasswordConfirmSchema.safeParse(state.values);
+    const parsed = resetPasswordConfirmSchema.safeParse(values);
     if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setState((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
+      setError(parsed.error.issues[0]?.message || "Invalid input.");
       return;
     }
 
-    try {
-      if (!tokens) {
-        setState((prev) => ({
-          ...prev,
-          error:
-            "This password reset link is invalid or has expired. Please request a new one.",
-          isSubmitting: false,
-        }));
-        return;
-      }
+    if (!tokens) {
+      setTokenError(
+        "This password reset link is invalid or has expired. Please request a new one."
+      );
+      return;
+    }
 
-      const res = await fetch("/api/auth/reset-password/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          password: parsed.data.password,
-        }),
-      });
+    const res = await call(async () =>
+      postJson("/api/auth/reset-password/confirm", {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        password: parsed.data.password,
+      })
+    );
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Password reset confirmation failed", body);
-        setState((prev) => ({
-          ...prev,
-          error:
-            body.error ||
-            "This password reset link is invalid or has expired. Please request a new one.",
-          isSubmitting: false,
-        }));
-        return;
-      }
-
-      setState((prev) => ({
-        ...prev,
-        success: "Your password has been updated. You can now sign in.",
-        isSubmitting: false,
-      }));
-
+    if (res !== null) {
+      setSuccess("Your password has been updated. You can now sign in.");
       setTimeout(() => {
         router.push("/auth/login");
       }, 1500);
-    } catch (error) {
-      logger.error("Unexpected error during password reset confirmation", error);
-      setState((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
     }
   };
 
-  const { error, success, isSessionReady, isSubmitting } = state;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -154,9 +96,9 @@ export default function ResetPasswordConfirmPage() {
           Choose a new password
         </h1>
 
-        {error && (
+        {(error || tokenError) && (
           <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+            {error || tokenError}
           </div>
         )}
 
@@ -166,7 +108,7 @@ export default function ResetPasswordConfirmPage() {
           </div>
         )}
 
-        {!isSessionReady && !error && (
+        {!isSessionReady && !tokenError && (
           <p className="text-sm text-slate-600">
             Validating your reset link...
           </p>
@@ -185,7 +127,7 @@ export default function ResetPasswordConfirmPage() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                value={state.values.password}
+                value={values.password}
                 onChange={handleChange("password")}
                 className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 required
@@ -203,7 +145,7 @@ export default function ResetPasswordConfirmPage() {
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
-                value={state.values.confirmPassword}
+                value={values.confirmPassword}
                 onChange={handleChange("confirmPassword")}
                 className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 required
@@ -212,10 +154,16 @@ export default function ResetPasswordConfirmPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={loading}
               className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
             >
-              {isSubmitting ? "Updating password..." : "Update password"}
+              {loading ? (
+                <>
+                  <Spinner size={4} /> Updating password...
+                </>
+              ) : (
+                "Update password"
+              )}
             </button>
           </form>
         )}

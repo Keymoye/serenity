@@ -6,14 +6,8 @@ import {
   registerSchema,
   type RegisterInput,
 } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
-
-type FormState = {
-  values: RegisterInput;
-  error: string | null;
-  success: string | null;
-  isSubmitting: boolean;
-};
+import { postJson, useApi } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const INITIAL_VALUES: RegisterInput = {
   email: "",
@@ -27,83 +21,39 @@ export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [state, setState] = useState<FormState>({
-    values: INITIAL_VALUES,
-    error: null,
-    success: null,
-    isSubmitting: false,
-  });
+  const { loading, error, call, setError } = useApi();
+  const [values, setValues] = useState<RegisterInput>(INITIAL_VALUES);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleChange = (field: keyof RegisterInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [field]: value },
-      }));
+      setValues((v) => ({ ...v, [field]: event.target.value }));
     };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
+    setSuccess(null);
 
-    setState((prev) => ({
-      ...prev,
-      error: null,
-      success: null,
-      isSubmitting: true,
-    }));
-
-    const parsed = registerSchema.safeParse(state.values);
+    const parsed = registerSchema.safeParse(values);
     if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setState((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
+      setError(parsed.error.issues[0]?.message || "Invalid input.");
       return;
     }
 
-    const { email, password, name, phone } = parsed.data;
+    const res = await call(async () =>
+      postJson("/api/auth/register", parsed.data)
+    );
 
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      });
-
-      const body = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        logger.error("Registration failed", body);
-        setState((prev) => ({
-          ...prev,
-          error: body.error || "Unable to create account.",
-          isSubmitting: false,
-        }));
+    if (res !== null) {
+      if (res.requiresEmailConfirmation) {
+        setSuccess(
+          "Account created. Please check your email to confirm your address before logging in."
+        );
         return;
       }
-
-      if (body.requiresEmailConfirmation) {
-        setState((prev) => ({
-          ...prev,
-          success:
-            "Account created. Please check your email to confirm your address before logging in.",
-          isSubmitting: false,
-        }));
-        return;
-      }
-
       const next = searchParams.get("next");
       router.push(next || "/dashboard");
-    } catch (error) {
-      logger.error("Unexpected error during registration", error);
-      setState((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
     }
   };
 
@@ -114,15 +64,15 @@ export default function RegisterPage() {
           Create account
         </h1>
 
-        {state.error && (
+        {error && (
           <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {state.error}
+            {error}
           </div>
         )}
 
-        {state.success && (
+        {success && (
           <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {state.success}
+            {success}
           </div>
         )}
 
@@ -138,7 +88,7 @@ export default function RegisterPage() {
               id="name"
               type="text"
               autoComplete="name"
-              value={state.values.name}
+              value={values.name}
               onChange={handleChange("name")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -156,7 +106,7 @@ export default function RegisterPage() {
               id="email"
               type="email"
               autoComplete="email"
-              value={state.values.email}
+              value={values.email}
               onChange={handleChange("email")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -174,7 +124,7 @@ export default function RegisterPage() {
               id="phone"
               type="tel"
               autoComplete="tel"
-              value={state.values.phone ?? ""}
+              value={values.phone ?? ""}
               onChange={handleChange("phone")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
             />
@@ -191,7 +141,7 @@ export default function RegisterPage() {
               id="password"
               type="password"
               autoComplete="new-password"
-              value={state.values.password}
+              value={values.password}
               onChange={handleChange("password")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -209,7 +159,7 @@ export default function RegisterPage() {
               id="confirmPassword"
               type="password"
               autoComplete="new-password"
-              value={state.values.confirmPassword}
+              value={values.confirmPassword}
               onChange={handleChange("confirmPassword")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -218,10 +168,16 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={state.isSubmitting}
+            disabled={loading}
             className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
           >
-            {state.isSubmitting ? "Creating account..." : "Create account"}
+            {loading ? (
+              <>
+                <Spinner size={4} /> Creating account...
+              </>
+            ) : (
+              "Create account"
+            )}
           </button>
         </form>
 

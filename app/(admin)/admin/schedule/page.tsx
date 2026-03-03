@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { adminTimeSlotCreateSchema, type AdminTimeSlotCreateInput } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
+import { apiFetch, postJson } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 type SlotRow = {
   id: string;
@@ -21,20 +22,17 @@ const INITIAL_FORM: AdminTimeSlotCreateInput = {
 export default function AdminSchedulePage() {
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<{ values: AdminTimeSlotCreateInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
 
   const loadSlots = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/time-slots");
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        logger.error("Failed to load time slots", body);
-        return;
-      }
+      const body = await apiFetch("/api/admin/time-slots");
       setSlots((body ?? []) as SlotRow[]);
-    } catch (err) {
-      logger.error("Unexpected error loading time slots", err);
+    } catch {
+      setError("Failed to load time slots");
     } finally {
       setLoading(false);
     }
@@ -55,22 +53,11 @@ export default function AdminSchedulePage() {
     }
 
     try {
-      const res = await fetch("/api/admin/time-slots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to create time slot", body);
-        setForm((prev) => ({ ...prev, error: "Unable to create time slot.", isSubmitting: false }));
-        return;
-      }
+      await postJson("/api/admin/time-slots", parsed.data);
       setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
       await loadSlots();
-    } catch (err) {
-      logger.error("Unexpected error creating time slot", err);
-      setForm((prev) => ({ ...prev, error: "Something went wrong.", isSubmitting: false }));
+    } catch {
+      setForm((prev) => ({ ...prev, error: "Failed to create time slot.", isSubmitting: false }));
     }
   };
 
@@ -99,7 +86,9 @@ export default function AdminSchedulePage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-sm text-slate-600">Loading slots...</td></tr>
+                <tr><td colSpan={4} className="px-3 py-4 text-center"><Spinner /></td></tr>
+              ) : error ? (
+                <tr><td colSpan={4} className="px-3 py-4 text-sm text-red-600">{error}</td></tr>
               ) : slots.length === 0 ? (
                 <tr><td colSpan={4} className="px-3 py-4 text-sm text-slate-600">No slots defined yet.</td></tr>
               ) : (

@@ -4,6 +4,7 @@ import { BookingWizard } from "@/components/booking/BookingWizard";
 type BookPageProps = {
   searchParams: {
     serviceId?: string;
+    therapistId?: string;
   };
 };
 
@@ -15,7 +16,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
     return null;
   }
 
-  const { serviceId: initialServiceId } = (await searchParams) ?? {};
+  const { serviceId: initialServiceId, therapistId: initialTherapistId } = (await searchParams) ?? {};
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -28,7 +29,10 @@ export default async function BookPage({ searchParams }: BookPageProps) {
         </p>
       </header>
 
-      <BookingWizard initialServiceId={initialServiceId} />
+      <BookingWizard
+        initialServiceId={initialServiceId}
+        initialTherapistId={initialTherapistId}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   type AdminServiceInput,
 } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
+import { apiFetch } from "@/lib/utils/api";
 
 type ServiceRow = {
   id: string;
@@ -43,14 +44,8 @@ export default function AdminServicesPage() {
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/services");
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to load admin services", body);
-        return;
-      }
-      const data = await res.json();
-      setServices((data ?? []) as ServiceRow[]);
+      const data = await apiFetch<ServiceRow[]>("/api/admin/services");
+      setServices(data);
     } catch (error) {
       logger.error("Unexpected error while loading admin services", error);
     } finally {
@@ -64,17 +59,16 @@ export default function AdminServicesPage() {
 
   const handleToggleActive = async (service: ServiceRow) => {
     try {
-      const res = await fetch("/api/admin/services", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: service.id, is_active: !service.is_active, name: service.name, category: service.category, duration_minutes: service.duration_minutes, price: service.price }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to toggle service active", body, { serviceId: service.id });
-        return;
+        try {
+        await apiFetch("/api/admin/services", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: service.id, is_active: !service.is_active, name: service.name, category: service.category, duration_minutes: service.duration_minutes, price: service.price }),
+        });
+        await loadServices();
+      } catch (err) {
+        logger.error("Failed to toggle service active", err, { serviceId: service.id });
       }
-      await loadServices();
     } catch (error) {
       logger.error("Unexpected error toggling service active", error, {
         serviceId: service.id,
@@ -116,21 +110,23 @@ export default function AdminServicesPage() {
     }
 
     try {
-      const res = await fetch("/api/admin/services", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: parsed.data.name,
-          category: parsed.data.category || null,
-          duration_minutes: parsed.data.duration_minutes,
-          price: parsed.data.price,
-          is_active: typeof parsed.data.is_active === "boolean" ? parsed.data.is_active : true,
-        }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to create service", body);
+      try {
+        await apiFetch("/api/admin/services", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: parsed.data.name,
+            category: parsed.data.category || null,
+            duration_minutes: parsed.data.duration_minutes,
+            price: parsed.data.price,
+            is_active: typeof parsed.data.is_active === "boolean" ? parsed.data.is_active : true,
+          }),
+        });
+        // reload after successful creation
+        await loadServices();
+        setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
+      } catch (err) {
+        logger.error("Failed to create service", err);
         setForm((prev) => ({
           ...prev,
           error: "Unable to create service.",

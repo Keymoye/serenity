@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarPicker } from "./CalendarPicker";
 import { logger } from "@/lib/utils/logger";
 import type { BookingConfirmInput } from "@/lib/utils/validation";
+import { apiFetch, postJson } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 type WizardStep = 0 | 1 | 2 | 3;
 
@@ -28,6 +31,7 @@ type TimeSlot = {
 
 interface BookingWizardProps {
   initialServiceId?: string;
+  initialTherapistId?: string;
 }
 
 export function BookingWizard({ initialServiceId }: BookingWizardProps) {
@@ -44,6 +48,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
   const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(
     null
   );
+  const [initialTherapistSet, setInitialTherapistSet] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().slice(0, 10);
@@ -65,17 +70,11 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
       setLoadingServices(true);
       setError(null);
       try {
-        const res = await fetch("/api/services");
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          logger.error("Failed to load booking services", body);
-          setError("Unable to load services. Please try again.");
-          return;
-        }
-        setServices((body ?? []) as Service[]);
-      } catch (err) {
+        const data = await apiFetch<Service[]>("/api/services");
+        setServices(data);
+      } catch (err: unknown) {
         logger.error("Unexpected error while loading booking services", err);
-        setError("Something went wrong. Please try again.");
+        setError(err instanceof Error ? err.message : String(err) || "Unable to load services. Please try again.");
       } finally {
         setLoadingServices(false);
       }
@@ -95,26 +94,26 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
       setLoadingTherapists(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/services/${encodeURIComponent(selectedServiceId)}/therapists`,
+        const therapistsList = await apiFetch<Therapist[]>(
+          `/api/services/${encodeURIComponent(selectedServiceId)}/therapists`
         );
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          logger.error("Failed to load therapists for service", body, {
-            selectedServiceId,
-          });
-          setError("Unable to load therapists. Please try again.");
-          return;
-        }
-
-        const therapistsList = (body ?? []) as Therapist[];
         setTherapists(therapistsList);
-        setSelectedTherapistId(therapistsList[0]?.id ?? null);
-      } catch (err) {
+        // if caller passed initialTherapistId and matches
+        if (
+          initialTherapistId &&
+          !initialTherapistSet &&
+          therapistsList.some((t) => t.id === initialTherapistId)
+        ) {
+          setSelectedTherapistId(initialTherapistId);
+          setInitialTherapistSet(true);
+        } else {
+          setSelectedTherapistId(therapistsList[0]?.id ?? null);
+        }
+      } catch (err: unknown) {
         logger.error("Unexpected error while loading therapists", err, {
           selectedServiceId,
         });
-        setError("Something went wrong. Please try again.");
+        setError(err instanceof Error ? err.message : String(err) || "Unable to load therapists. Please try again.");
       } finally {
         setLoadingTherapists(false);
       }
@@ -134,36 +133,21 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
       setLoadingSlots(true);
       setError(null);
       try {
-        const response = await fetch("/api/booking/availability", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            serviceId: selectedServiceId,
-            therapistId: selectedTherapistId,
-            date: selectedDate,
-          }),
-        });
+        const payload = {
+          serviceId: selectedServiceId,
+          therapistId: selectedTherapistId,
+          date: selectedDate,
+        };
 
-        const body = await response.json();
+        const data = await postJson<{ slots: TimeSlot[] }>(
+          "/api/booking/availability",
+          payload
+        );
 
-        if (!response.ok) {
-          logger.error("Availability API failed", null, {
-            status: response.status,
-            body,
-          });
-          setError(
-            body.error || "Unable to load availability. Please try again."
-          );
-          setSlots([]);
-          return;
-        }
-
-        setSlots(body.slots as TimeSlot[]);
-      } catch (err) {
+        setSlots(data.slots);
+      } catch (err: unknown) {
         logger.error("Unexpected error while loading availability", err);
-        setError("Something went wrong. Please try again.");
+        setError(err instanceof Error ? err.message : String(err) || "Unable to load availability. Please try again.");
         setSlots([]);
       } finally {
         setLoadingSlots(false);
@@ -199,37 +183,22 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     setSelectedTimeSlotId(null);
 
     try {
-      const response = await fetch("/api/booking/lock", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ timeSlotId: slotId }),
-      });
+      await postJson("/api/booking/lock", { timeSlotId: slotId });
+      setSelectedTimeSlotId(slotId);
+    } catch (err: unknown) {
+      logger.warn("Lock API failed", err);
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        logger.warn("Lock API failed", { status: response.status, body });
-
-        if (body.code === "SLOT_TAKEN") {
-          setError(
-            "This time slot was just taken. Please choose another slot."
-          );
-        } else {
-          setError("Unable to lock this time slot. Please try again.");
-        }
-
-        // Refresh slots.
-        const event = new Event("refreshSlots");
-        window.dispatchEvent(event);
-        return;
+      // Best-effort message extraction
+      const bodyCode = (err as { body?: { code?: unknown } } | null)?.body?.code;
+      if (bodyCode === "SLOT_TAKEN") {
+        setError("This time slot was just taken. Please choose another slot.");
+      } else {
+        setError(err instanceof Error ? err.message : String(err) || "Unable to lock this time slot. Please try again.");
       }
 
-      setSelectedTimeSlotId(slotId);
-    } catch (err) {
-      logger.error("Unexpected error while locking slot", err);
-      setError("Something went wrong. Please try again.");
+      // Refresh slots.
+      const event = new Event("refreshSlots");
+      window.dispatchEvent(event);
     }
   };
 
@@ -250,69 +219,46 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/booking/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        logger.error("Booking confirm API failed", null, {
-          status: response.status,
-          body,
-        });
-        setError(
-          body.error || "Unable to confirm booking. Please try again."
-        );
-        setSubmitting(false);
-        return;
-      }
-
+      await postJson("/api/booking/confirm", payload);
       router.push("/dashboard");
       router.refresh();
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("Unexpected error during booking confirmation", err);
-      setError("Something went wrong. Please try again.");
+      setError(err instanceof Error ? err.message : String(err) || "Unable to confirm booking. Please try again.");
       setSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
-        <div className="flex gap-2 text-xs font-medium text-slate-600">
-          <span
-            className={`rounded-full px-2 py-1 ${
-              step === 0 ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            1. Service
-          </span>
-          <span
-            className={`rounded-full px-2 py-1 ${
-              step === 1 ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            2. Therapist
-          </span>
-          <span
-            className={`rounded-full px-2 py-1 ${
-              step === 2 ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            3. Date & time
-          </span>
-          <span
-            className={`rounded-full px-2 py-1 ${
-              step === 3 ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            4. Review
-          </span>
+      {/* progress indicator */}
+      <div className="mb-6">
+        <div className="flex items-center">
+          {['Service','Therapist','Date & time','Review'].map((label, i) => (
+            <div key={i} className="flex-1 flex items-center">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors duration-200
+                  ${step === i
+                    ? 'border-sky-600 bg-sky-600 text-white'
+                    : 'border-slate-300 bg-white text-slate-600'}`
+              >
+                {i + 1}
+              </div>
+              {i < 3 && (
+                <div
+                  className={`flex-1 h-0.5 mx-2 transition-colors duration-200 ${
+                    step > i ? 'bg-sky-600' : 'bg-slate-300'
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex justify-between text-xs text-slate-600">
+          <span>Service</span>
+          <span>Therapist</span>
+          <span>Date & time</span>
+          <span>Review</span>
         </div>
       </div>
 
@@ -322,14 +268,18 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         </div>
       )}
 
-      {/* Step content */}
+      {/* Step content with fade */}
+      <div key={step} className="transition-opacity duration-300">
       {step === 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-slate-900">
             Choose a service
           </h2>
           {loadingServices ? (
-            <p className="text-sm text-slate-600">Loading services...</p>
+            <div className="flex items-center gap-2">
+              <Spinner size={5} />
+              <span className="text-sm text-slate-600">Loading services...</span>
+            </div>
           ) : services.length === 0 ? (
             <p className="text-sm text-slate-600">
               No services are currently available to book.
@@ -371,7 +321,10 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             Choose a therapist
           </h2>
           {loadingTherapists ? (
-            <p className="text-sm text-slate-600">Loading therapists...</p>
+            <div className="flex items-center gap-2">
+              <Spinner size={5} />
+              <span className="text-sm text-slate-600">Loading therapists...</span>
+            </div>
           ) : therapists.length === 0 ? (
             <p className="text-sm text-slate-600">
               There are no therapists assigned to this service yet.
@@ -413,12 +366,19 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             <h2 className="text-sm font-semibold text-slate-900">
               Choose a date
             </h2>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            <div className="flex flex-col items-start space-y-2">
+            <CalendarPicker
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
             />
+            <button
+              type="button"
+              onClick={() => setSelectedDate(new Date().toISOString().slice(0,10))}
+              className="text-xs text-slate-600 hover:underline"
+            >
+              Today
+            </button>
+          </div>
           </div>
 
           <div className="space-y-2">
@@ -426,7 +386,10 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
               Available time slots
             </h3>
             {loadingSlots ? (
-              <p className="text-sm text-slate-600">Loading availability...</p>
+              <div className="flex items-center gap-2">
+                <Spinner size={5} />
+                <span className="text-sm text-slate-600">Loading availability...</span>
+              </div>
             ) : slots.length === 0 ? (
               <p className="text-sm text-slate-600">
                 No available slots for this date. Try another day.
@@ -538,9 +501,15 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
               type="button"
               onClick={handleConfirm}
               disabled={submitting}
-              className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300 flex items-center justify-center gap-2"
             >
-              {submitting ? "Confirming..." : "Confirm booking"}
+              {submitting ? (
+                <>
+                  <Spinner size={4} /> Confirming...
+                </>
+              ) : (
+                "Confirm booking"
+              )}
             </button>
           )}
         </div>

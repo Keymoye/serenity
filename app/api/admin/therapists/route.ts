@@ -120,11 +120,11 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id");
-    if (!id) {
+    const body = await req.json();
+    const id = body?.therapistId || body?.id;
+    if (!id || typeof id !== "string") {
       return NextResponse.json(
-        { error: "Missing id", code: "VALIDATION_ERROR" },
+        { error: "Missing therapistId", code: "VALIDATION_ERROR" },
         { status: 400 },
       );
     }

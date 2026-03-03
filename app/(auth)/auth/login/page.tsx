@@ -4,13 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginSchema } from "@/lib/utils/validation";
 import type { LoginInput } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
-
-type FormState = {
-  values: LoginInput;
-  error: string | null;
-  isSubmitting: boolean;
-};
+import { postJson, useApi } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const INITIAL_VALUES: LoginInput = {
   email: "",
@@ -21,63 +16,31 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [state, setState] = useState<FormState>({
-    values: INITIAL_VALUES,
-    error: null,
-    isSubmitting: false,
-  });
+  const { loading, error, call, setError } = useApi();
+  const [values, setValues] = useState<LoginInput>(INITIAL_VALUES);
 
-  const handleChange = (field: keyof LoginInput) => 
+  const handleChange = (field: keyof LoginInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [field]: value },
-      }));
+      setValues((v) => ({ ...v, [field]: event.target.value }));
     };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
 
-    setState((prev) => ({ ...prev, error: null, isSubmitting: true }));
-
-    const parsed = loginSchema.safeParse(state.values);
+    const parsed = loginSchema.safeParse(values);
     if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setState((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
+      setError(parsed.error.issues[0]?.message || "Invalid input.");
       return;
     }
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Login failed", body);
-        setState((prev) => ({
-          ...prev,
-          error: "Invalid email or password.",
-          isSubmitting: false,
-        }));
-        return;
-      }
+    const success = await call(async () =>
+      postJson("/api/auth/login", parsed.data)
+    );
 
+    if (success !== null) {
       const next = searchParams.get("next");
       router.push(next || "/dashboard");
-    } catch (error) {
-      logger.error("Unexpected error during login", error);
-      setState((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
     }
   };
 
@@ -88,9 +51,9 @@ export default function LoginPage() {
           Login
         </h1>
 
-        {state.error && (
+        {error && (
           <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {state.error}
+            {error}
           </div>
         )}
 
@@ -106,7 +69,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               autoComplete="email"
-              value={state.values.email}
+              value={values.email}
               onChange={handleChange("email")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -124,7 +87,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               autoComplete="current-password"
-              value={state.values.password}
+              value={values.password}
               onChange={handleChange("password")}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
@@ -133,10 +96,16 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={state.isSubmitting}
+            disabled={loading}
             className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
           >
-            {state.isSubmitting ? "Signing in..." : "Sign in"}
+            {loading ? (
+              <>
+                <Spinner size={4} /> Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </form>
 

@@ -36,6 +36,9 @@ export interface ServiceRepository {
   listTherapistsForService(serviceId: string): Promise<
     Array<{ id: string; name: string; title: string | null; is_active?: boolean | null }>
   >;
+  listServicesForTherapist(therapistId: string): Promise<
+    Array<{ id: string; name: string; category: string | null; duration_minutes: number | null; price: number | null; thumbnail_url: string | null }>
+  >;
   listFeaturedServiceSummaries(): Promise<
     Array<{
       id: string;
@@ -153,6 +156,30 @@ export function createServiceRepository(): ServiceRepository {
       return rows
         .map((r) => r.therapists)
         .filter((t): t is Therapist => Boolean(t));
+    },
+    async listServicesForTherapist(therapistId: string) {
+      const supabase = await getSupabaseUserClient();
+      const { data, error } = await supabase
+        .from("therapist_service")
+        .select("services(id, name, category, duration_minutes, price, thumbnail_url)")
+        .eq("therapist_id", therapistId)
+        .eq("services.is_active", true);
+      if (error) throw error;
+
+      type ServiceRow = {
+        services?: {
+          id: string;
+          name: string;
+          category: string | null;
+          duration_minutes: number | null;
+          price: number | null;
+          thumbnail_url: string | null;
+        } | null;
+      };
+      const rows = (data ?? []) as unknown as ServiceRow[];
+      return rows
+        .map((r) => r.services)
+        .filter((s): s is NonNullable<ServiceRow["services"]> => Boolean(s));
     },
 
     async listFeaturedServiceSummaries() {

@@ -251,10 +251,17 @@ export async function toggleMessageReadAdmin(
   await deps.messageRepo.setMessageRead(input.messageId, input.isRead);
 }
 
+export type AdminMetrics = {
+  bookingsThisMonth: number;
+  upcomingToday: number;
+  unreadMessages: number;
+  bookingsLast7Days: Array<{ date: string; count: number }>;
+};
+
 export async function getAdminMetrics(
   context: AdminContext,
   deps: AdminDependencies = createDefaultDeps(),
-) {
+): Promise<AdminMetrics> {
   assertAdmin(context);
   const now = new Date();
   const startOfMonth = new Date(
@@ -291,6 +298,22 @@ export async function getAdminMetrics(
       endOfToday,
     );
 
-  return { bookingsThisMonth, upcomingToday, unreadMessages };
+  // bookings per day chart
+  const bookingsLast7Days: Array<{ date: string; count: number }> = [];
+  for (let delta = 6; delta >= 0; delta--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - delta);
+    const start = new Date(d);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+    const count = await deps.bookingRepo.countConfirmedBookingsWithSlotBetween(
+      start.toISOString(),
+      end.toISOString(),
+    );
+    bookingsLast7Days.push({ date: start.toISOString().slice(0, 10), count });
+  }
+
+  return { bookingsThisMonth, upcomingToday, unreadMessages, bookingsLast7Days };
 }
 

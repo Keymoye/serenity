@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { logger } from "@/lib/utils/logger";
+import { apiFetch } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 type MessageRow = {
   id: string;
@@ -16,21 +17,17 @@ type MessageRow = {
 export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   const loadMessages = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/messages");
-      const body = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        logger.error("Failed to load admin messages", body);
-        return;
-      }
-
+      const body = await apiFetch("/api/admin/messages");
       setMessages((body ?? []) as MessageRow[]);
-    } catch (error) {
-      logger.error("Unexpected error while loading admin messages", error);
+    } catch {
+      setError("Failed to load messages");
     } finally {
       setLoading(false);
     }
@@ -41,26 +38,17 @@ export default function AdminMessagesPage() {
   }, [loadMessages]);
 
   const toggleRead = async (msg: MessageRow) => {
+    setToggling(msg.id);
     try {
-      const res = await fetch("/api/admin/messages", {
+      await apiFetch("/api/admin/messages", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, is_read: !msg.is_read }),
       });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        logger.error("Failed to toggle message read state", body, {
-          messageId: msg.id,
-        });
-        return;
-      }
-
       await loadMessages();
-    } catch (error) {
-      logger.error("Unexpected error toggling message read state", error, {
-        messageId: msg.id,
-      });
+    } catch {
+      setError("Failed to update message status");
+    } finally {
+      setToggling(null);
     }
   };
 
@@ -77,8 +65,12 @@ export default function AdminMessagesPage() {
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="px-4 py-4 text-sm text-slate-600">
-            Loading messages...
+          <p className="px-4 py-4 text-center">
+            <Spinner />
+          </p>
+        ) : error ? (
+          <p className="px-4 py-4 text-sm text-red-600">
+            {error}
           </p>
         ) : messages.length === 0 ? (
           <p className="px-4 py-4 text-sm text-slate-600">
@@ -123,9 +115,10 @@ export default function AdminMessagesPage() {
                   <button
                     type="button"
                     onClick={() => toggleRead(msg)}
-                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    disabled={toggling === msg.id}
+                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Mark as {msg.is_read ? "unread" : "read"}
+                    {toggling === msg.id ? <Spinner /> : `Mark as ${msg.is_read ? "unread" : "read"}`}
                   </button>
                 </div>
               </li>

@@ -63,3 +63,19 @@ export async function listTherapistsForService(
   }
 }
 
+export async function getTherapistDetail(
+  input: { therapistId: string },
+  deps: ServiceDependencies = createDefaultDeps(),
+) {
+  try {
+    // fetch all active therapists from repository and find matching
+    const therapists = await deps.serviceRepo.listActiveTherapists();
+    const therapist = therapists.find((t) => t.id === input.therapistId);
+    if (!therapist) return null;
+    const services = await deps.serviceRepo.listServicesForTherapist(input.therapistId);
+    return { therapist, services };
+  } catch (error) {
+    throw new InternalError("THERAPIST_DETAIL_FAILED", "Unable to load therapist.", { error });
+  }
+}
+

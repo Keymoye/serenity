@@ -6,6 +6,7 @@ type Metrics = {
   bookingsThisMonth: number;
   upcomingToday: number;
   unreadMessages: number;
+  bookingsLast7Days: Array<{ date: string; count: number }>;
 };
 
 async function getAdminMetrics(context: { userId: string; role: string }): Promise<Metrics> {
@@ -17,6 +18,7 @@ async function getAdminMetrics(context: { userId: string; role: string }): Promi
       bookingsThisMonth: 0,
       upcomingToday: 0,
       unreadMessages: 0,
+      bookingsLast7Days: [],
     };
   }
 }
@@ -67,6 +69,27 @@ export default async function AdminDashboardPage() {
           <p className="mt-2 text-2xl font-semibold text-slate-900">
             {metrics.unreadMessages}
           </p>
+        </div>
+      </section>
+
+      {/* chart area */}
+      <section>
+        <h2 className="text-lg font-medium text-slate-900">Bookings last 7 days</h2>
+        <div className="mt-3 flex items-end gap-2 h-32">
+          {metrics.bookingsLast7Days.map((b) => {
+            const max = Math.max(...metrics.bookingsLast7Days.map((x) => x.count));
+            const height = max > 0 ? (b.count / max) * 100 : 0;
+            const label = new Date(b.date).toLocaleDateString(undefined, { weekday: 'short' });
+            return (
+              <div key={b.date} className="flex flex-col items-center">
+                <div
+                  className="w-6 bg-sky-600 transition-all"
+                  style={{ height: `${height}%` }}
+                />
+                <span className="text-xs text-slate-600 mt-1">{label}</span>
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>
