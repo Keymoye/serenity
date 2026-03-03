@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { adminTimeSlotCreateSchema, type AdminTimeSlotCreateInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 
@@ -20,8 +19,6 @@ const INITIAL_FORM: AdminTimeSlotCreateInput = {
 };
 
 export default function AdminSchedulePage() {
-  const supabase = getBrowserSupabaseClient();
-
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<{ values: AdminTimeSlotCreateInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
@@ -29,18 +26,19 @@ export default function AdminSchedulePage() {
   const loadSlots = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("time_slots").select("id, therapist_id, start_time, end_time, is_available").order("start_time", { ascending: false });
-      if (error) {
-        logger.error("Failed to load time slots", error);
+      const res = await fetch("/api/admin/time-slots");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        logger.error("Failed to load time slots", body);
         return;
       }
-      setSlots((data ?? []) as SlotRow[]);
+      setSlots((body ?? []) as SlotRow[]);
     } catch (err) {
       logger.error("Unexpected error loading time slots", err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadSlots();
@@ -57,9 +55,14 @@ export default function AdminSchedulePage() {
     }
 
     try {
-      const { error } = await supabase.from("time_slots").insert({ therapist_id: parsed.data.therapistId, start_time: parsed.data.start_time, end_time: parsed.data.end_time });
-      if (error) {
-        logger.error("Failed to create time slot", error);
+      const res = await fetch("/api/admin/time-slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to create time slot", body);
         setForm((prev) => ({ ...prev, error: "Unable to create time slot.", isSubmitting: false }));
         return;
       }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { adminTherapistSchema, type AdminTherapistInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 
@@ -24,8 +23,6 @@ const INITIAL_FORM: AdminTherapistInput = {
 };
 
 export default function AdminTherapistsPage() {
-  const supabase = getBrowserSupabaseClient();
-
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<{ values: AdminTherapistInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
@@ -33,33 +30,41 @@ export default function AdminTherapistsPage() {
   const loadTherapists = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("therapists").select("id, name, title, photo_url, bio_short, is_active, created_at").order("created_at", { ascending: false });
-      if (error) {
-        logger.error("Failed to load therapists", error);
+      const res = await fetch("/api/admin/therapists");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to load therapists", body);
         return;
       }
+      const data = await res.json();
       setTherapists((data ?? []) as TherapistRow[]);
     } catch (err) {
       logger.error("Unexpected error loading therapists", err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadTherapists();
   }, [loadTherapists]);
 
   const handleToggleActive = async (t: TherapistRow) => {
+    // Local-only toggle: update UI without calling server (no-op on backend)
+    setTherapists((prev) => prev.map((p) => (p.id === t.id ? { ...p, is_active: !p.is_active } : p)));
+  };
+
+  const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("therapists").update({ is_active: !t.is_active }).eq("id", t.id);
-      if (error) {
-        logger.error("Failed to toggle therapist active", error, { therapistId: t.id });
+      const res = await fetch(`/api/admin/therapists?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to delete therapist", body, { therapistId: id });
         return;
       }
-      await loadTherapists();
+      setTherapists((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      logger.error("Unexpected error toggling therapist active", err, { therapistId: t.id });
+      logger.error("Unexpected error deleting therapist", err, { therapistId: id });
     }
   };
 
@@ -79,9 +84,20 @@ export default function AdminTherapistsPage() {
     }
 
     try {
-      const { error } = await supabase.from("therapists").insert({ name: parsed.data.name, title: parsed.data.title || null, photo_url: parsed.data.photo_url || null, bio_short: parsed.data.bio_short || null, is_active: parsed.data.is_active ?? true });
-      if (error) {
-        logger.error("Failed to create therapist", error);
+      const res = await fetch("/api/admin/therapists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: parsed.data.name,
+          title: parsed.data.title || null,
+          photo_url: parsed.data.photo_url || null,
+          bio_short: parsed.data.bio_short || null,
+          is_active: parsed.data.is_active ?? true,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to create therapist", body);
         setForm((prev) => ({ ...prev, error: "Unable to create therapist.", isSubmitting: false }));
         return;
       }

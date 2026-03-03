@@ -1,8 +1,15 @@
 import React from "react";
-import { listBookings } from "@/lib/db/bookings";
+import { getCurrentUser } from "@/lib/services/authService";
+import { listAdminBookingRows } from "@/lib/application/admin.service";
 
 export default async function BookingsAdminPage() {
-  const bookings = await listBookings();
+  const current = await getCurrentUser();
+  if (!current) return null;
+
+  const bookings = await listAdminBookingRows({
+    userId: current.user.id,
+    role: current.profile.role,
+  });
   return (
     <div>
       <h1>Bookings (Admin)</h1>
@@ -11,7 +18,7 @@ export default async function BookingsAdminPage() {
         <ul>
           {bookings.map((b) => (
             <li key={b.id}>
-              <strong>{b.customer_name}</strong> — {b.date} {b.time}
+              <strong>{b.customer_name}</strong> — {b.created_at ?? "—"}
             </li>
           ))}
         </ul>

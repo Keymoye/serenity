@@ -1,5 +1,3 @@
-import { getServerSupabaseClient } from "../supabase/server";
-
 export type ScheduleItem = {
   id?: string;
   therapist_id: string;
@@ -9,30 +7,24 @@ export type ScheduleItem = {
   capacity?: number;
 };
 
+import { createScheduleRepository } from "../infra/supabase/schedule.repo";
+
+const scheduleRepo = createScheduleRepository();
+
 export async function listSchedule() {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("schedules").select("*").order("date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as ScheduleItem[];
+  return scheduleRepo.listSchedule();
 }
 
 export async function createSchedule(payload: ScheduleItem) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("schedules").insert(payload).select().single();
-  if (error) throw error;
-  return data as ScheduleItem;
+  return scheduleRepo.createSchedule(payload);
 }
 
 export async function updateSchedule(id: string, payload: Partial<ScheduleItem>) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("schedules").update(payload).eq("id", id).select().single();
-  if (error) throw error;
-  return data as ScheduleItem;
+  return scheduleRepo.updateSchedule(id, payload);
 }
 
 export async function deleteSchedule(id: string) {
-  const supabase = await getServerSupabaseClient();
-  const { error } = await supabase.from("schedules").delete().eq("id", id);
-  if (error) throw error;
+  await scheduleRepo.deleteSchedule(id);
   return true;
 }
+

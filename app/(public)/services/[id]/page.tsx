@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { MapEmbed } from "@/components/MapEmbed";
+import { getPublicServiceDetail } from "@/lib/application/service.service";
 
 type ServiceDetailPageProps = {
   params: { id: string };
@@ -39,61 +39,11 @@ async function getServiceDetail(
   therapists: Therapist[];
 }> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { data: service, error: serviceError } = await supabase
-      .from("services")
-      .select(
-        "id, name, category, duration_minutes, price, description, thumbnail_url, is_active"
-      )
-      .eq("id", id)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (serviceError) {
-      logger.error("Failed to load service detail", serviceError, { id });
-      return { service: null, images: [], therapists: [] };
-    }
-
-    if (!service) {
-      return { service: null, images: [], therapists: [] };
-    }
-
-    const [{ data: images, error: imagesError }, { data: therapistRows, error: therapistsError }] =
-      await Promise.all([
-        supabase
-          .from("service_images")
-          .select("id, image_url, sort_order")
-          .eq("service_id", id)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("therapist_service")
-          .select("therapists(id, name, title, photo_url, bio_short)")
-          .eq("service_id", id),
-      ]);
-
-    if (imagesError) {
-      logger.error("Failed to load service images", imagesError, { id });
-    }
-
-    if (therapistsError) {
-      logger.error("Failed to load service therapists", therapistsError, {
-        id,
-      });
-    }
-
-    type RawTherapistRow = { therapists?: Therapist | null };
-    const therapists: Therapist[] = (
-      (therapistRows ?? []) as unknown as RawTherapistRow[]
-    )
-      .map((row) => row.therapists)
-      .filter((t): t is Therapist => Boolean(t))
-      .map((t) => t as Therapist);
-
+    const result = await getPublicServiceDetail({ id });
     return {
-      service: service as ServiceDetail,
-      images: (images ?? []) as ServiceImage[],
-      therapists,
+      service: result.service as unknown as ServiceDetail | null,
+      images: result.images as unknown as ServiceImage[],
+      therapists: result.therapists as unknown as Therapist[],
     };
   } catch (error) {
     logger.error("Unexpected error while loading service detail", error, { id });
@@ -104,7 +54,7 @@ async function getServiceDetail(
 export default async function ServiceDetailPage({
   params,
 }: ServiceDetailPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const { service, images, therapists } = await getServiceDetail(id);
 
   if (!service) {

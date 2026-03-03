@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/utils/logger";
 
 type MessageRow = {
@@ -15,32 +14,27 @@ type MessageRow = {
 };
 
 export default function AdminMessagesPage() {
-  const supabase = getBrowserSupabaseClient();
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadMessages = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select(
-          "id, full_name, email, subject, message, is_read, created_at"
-        )
-        .order("created_at", { ascending: false });
+      const res = await fetch("/api/admin/messages");
+      const body = await res.json().catch(() => ({}));
 
-      if (error) {
-        logger.error("Failed to load admin messages", error);
+      if (!res.ok) {
+        logger.error("Failed to load admin messages", body);
         return;
       }
 
-      setMessages((data ?? []) as MessageRow[]);
+      setMessages((body ?? []) as MessageRow[]);
     } catch (error) {
       logger.error("Unexpected error while loading admin messages", error);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadMessages();
@@ -48,13 +42,15 @@ export default function AdminMessagesPage() {
 
   const toggleRead = async (msg: MessageRow) => {
     try {
-      const { error } = await supabase
-        .from("messages")
-        .update({ is_read: !msg.is_read })
-        .eq("id", msg.id);
+      const res = await fetch("/api/admin/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id, is_read: !msg.is_read }),
+      });
 
-      if (error) {
-        logger.error("Failed to toggle message read state", error, {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to toggle message read state", body, {
           messageId: msg.id,
         });
         return;

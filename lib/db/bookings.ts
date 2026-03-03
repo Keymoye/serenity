@@ -1,40 +1,24 @@
-import { getServerSupabaseClient } from "../supabase/server";
+import type { Booking } from "../domain/booking.types";
+import { createBookingRepository } from "../infra/supabase/booking.repo";
 
-export type Booking = {
-  id?: string;
-  service_id: string;
-  therapist_id?: string | null;
-  date: string;
-  time: string;
-  customer_name: string;
-  status?: string;
-  created_at?: string;
-};
+const bookingRepo = createBookingRepository();
+
+export type { Booking };
 
 export async function listBookings() {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("bookings").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Booking[];
+  return bookingRepo.listBookings();
 }
 
 export async function createBooking(payload: Booking) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("bookings").insert(payload).select().single();
-  if (error) throw error;
-  return data as Booking;
+  return bookingRepo.createBooking(payload);
 }
 
 export async function updateBooking(id: string, payload: Partial<Booking>) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("bookings").update(payload).eq("id", id).select().single();
-  if (error) throw error;
-  return data as Booking;
+  return bookingRepo.updateBooking(id, payload);
 }
 
 export async function deleteBooking(id: string) {
-  const supabase = await getServerSupabaseClient();
-  const { error } = await supabase.from("bookings").delete().eq("id", id);
-  if (error) throw error;
+  await bookingRepo.deleteBooking(id);
   return true;
 }
+

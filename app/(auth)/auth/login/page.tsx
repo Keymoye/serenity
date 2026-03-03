@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/utils/validation";
 import type { LoginInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
@@ -54,15 +53,14 @@ export default function LoginPage() {
     }
 
     try {
-      const supabase = getBrowserSupabaseClient();
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: parsed.data.email,
-        password: parsed.data.password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
       });
-
-      if (error) {
-        logger.error("Login failed", error);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Login failed", body);
         setState((prev) => ({
           ...prev,
           error: "Invalid email or password.",

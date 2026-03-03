@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   resetPasswordRequestSchema,
   type ResetPasswordRequestInput,
@@ -57,8 +56,6 @@ export default function ResetPasswordRequestPage() {
     }
 
     try {
-      const supabase = getBrowserSupabaseClient();
-
       const origin =
         typeof window !== "undefined" ? window.location.origin : undefined;
 
@@ -66,16 +63,18 @@ export default function ResetPasswordRequestPage() {
         ? `${origin}/auth/reset-password/confirm`
         : undefined;
 
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        parsed.data.email,
-        redirectTo ? { redirectTo } : undefined
-      );
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: parsed.data.email, redirectTo }),
+      });
 
-      if (error) {
-        logger.error("Reset password request failed", error);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Reset password request failed", body);
         setState((prev) => ({
           ...prev,
-          error: error.message || "Unable to send reset link.",
+          error: body.error || "Unable to send reset link.",
           isSubmitting: false,
         }));
         return;

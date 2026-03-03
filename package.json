@@ -6,8 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "diagrams:render": "node ./scripts/render-diagrams.js"
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "diagrams:render": "node ./scripts/render-diagrams.js",
+    "test": "vitest",
+    "test:unit": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -26,6 +32,9 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "@mermaid-js/mermaid-cli": "^9.0.0"
+    "@mermaid-js/mermaid-cli": "^9.0.0",
+    "vitest": "^1.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0"
   }
 }

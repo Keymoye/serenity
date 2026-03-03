@@ -1,6 +1,6 @@
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/services/authService";
 import { logger } from "@/lib/utils/logger";
+import { getAdminMetrics as getAdminMetricsService } from "@/lib/application/admin.service";
 
 type Metrics = {
   bookingsThisMonth: number;
@@ -8,76 +8,9 @@ type Metrics = {
   unreadMessages: number;
 };
 
-async function getAdminMetrics(): Promise<Metrics> {
+async function getAdminMetrics(context: { userId: string; role: string }): Promise<Metrics> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      .toISOString();
-    const endOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23,
-      59,
-      59,
-      999
-    ).toISOString();
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0
-    ).toISOString();
-
-    const [
-      { count: bookingsThisMonthCount, error: bookingsError },
-      { data: todaysBookings, error: upcomingError },
-      { count: unreadMessagesCount, error: messagesError },
-    ] = await Promise.all([
-      supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", startOfMonth),
-      supabase
-        .from("bookings")
-        .select("id, time_slots(start_time), status")
-        .eq("status", "confirmed")
-        .gte("time_slots.start_time", startOfToday)
-        .lte("time_slots.start_time", endOfToday),
-      supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("is_read", false),
-    ]);
-
-    if (bookingsError) {
-      logger.error("Failed to load bookingsThisMonth metric", bookingsError);
-    }
-
-    if (upcomingError) {
-      logger.error("Failed to load upcomingToday metric", upcomingError);
-    }
-
-    if (messagesError) {
-      logger.error("Failed to load unreadMessages metric", messagesError);
-    }
-
-    type BookingRow = { time_slots?: { start_time?: string } };
-    const upcomingToday =
-      ((todaysBookings ?? []) as BookingRow[]).filter(
-        (b) => Boolean(b.time_slots && b.time_slots.start_time)
-      ).length ?? 0;
-
-    return {
-      bookingsThisMonth: bookingsThisMonthCount ?? 0,
-      upcomingToday,
-      unreadMessages: unreadMessagesCount ?? 0,
-    };
+    return await getAdminMetricsService(context);
   } catch (error) {
     logger.error("Unexpected error while loading admin metrics", error);
     return {
@@ -94,7 +27,10 @@ export default async function AdminDashboardPage() {
     return null;
   }
 
-  const metrics = await getAdminMetrics();
+  const metrics = await getAdminMetrics({
+    userId: current.user.id,
+    role: current.profile.role,
+  });
 
   return (
     <div className="space-y-8">

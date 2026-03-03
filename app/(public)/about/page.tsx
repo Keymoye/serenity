@@ -1,5 +1,5 @@
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
+import { listPublicTherapists } from "@/lib/application/therapist.service";
 
 type Therapist = {
   id: string;
@@ -11,20 +11,8 @@ type Therapist = {
 
 async function getTherapists(): Promise<Therapist[]> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { data, error } = await supabase
-      .from("therapists")
-      .select("id, name, title, photo_url, bio_short, is_active")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-
-    if (error) {
-      logger.error("Failed to load therapists for about page", error);
-      return [];
-    }
-
-    return (data ?? []) as Therapist[];
+    const rows = await listPublicTherapists();
+    return (rows ?? []) as unknown as Therapist[];
   } catch (error) {
     logger.error("Unexpected error while loading therapists", error);
     return [];

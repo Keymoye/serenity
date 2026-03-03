@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   registerSchema,
   type RegisterInput,
@@ -68,34 +67,25 @@ export default function RegisterPage() {
     const { email, password, name, phone } = parsed.data;
 
     try {
-      const supabase = getBrowserSupabaseClient();
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone: phone || null,
-          },
-        },
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
       });
 
-      if (error) {
-        logger.error("Registration failed", error);
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        logger.error("Registration failed", body);
         setState((prev) => ({
           ...prev,
-          error: error.message || "Unable to create account.",
+          error: body.error || "Unable to create account.",
           isSubmitting: false,
         }));
         return;
       }
 
-      // If email confirmation is enabled, Supabase will send a link.
-      const requiresEmailConfirmation =
-        !data.session && data.user && !data.user.email_confirmed_at;
-
-      if (requiresEmailConfirmation) {
+      if (body.requiresEmailConfirmation) {
         setState((prev) => ({
           ...prev,
           success:

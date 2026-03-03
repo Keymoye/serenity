@@ -1,36 +1,24 @@
-import { getServerSupabaseClient } from "../supabase/server";
+import type { Therapist } from "../domain/therapist.types";
+import { createTherapistRepository } from "../infra/supabase/therapist.repo";
 
-export type Therapist = {
-  id?: string;
-  name: string;
-  bio?: string | null;
-  created_at?: string;
-};
+const therapistRepo = createTherapistRepository();
+
+export type { Therapist };
 
 export async function listTherapists() {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("therapists").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Therapist[];
+  return therapistRepo.listTherapists();
 }
 
 export async function createTherapist(payload: Therapist) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("therapists").insert(payload).select().single();
-  if (error) throw error;
-  return data as Therapist;
+  return therapistRepo.createTherapist(payload);
 }
 
 export async function updateTherapist(id: string, payload: Partial<Therapist>) {
-  const supabase = await getServerSupabaseClient();
-  const { data, error } = await supabase.from("therapists").update(payload).eq("id", id).select().single();
-  if (error) throw error;
-  return data as Therapist;
+  return therapistRepo.updateTherapist(id, payload);
 }
 
 export async function deleteTherapist(id: string) {
-  const supabase = await getServerSupabaseClient();
-  const { error } = await supabase.from("therapists").delete().eq("id", id);
-  if (error) throw error;
+  await therapistRepo.deleteTherapist(id);
   return true;
 }
+

@@ -1,7 +1,7 @@
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import Link from "next/link";
+import { listPublicServices } from "@/lib/application/service.service";
 
 type ServicesPageProps = {
   searchParams: {
@@ -11,28 +11,8 @@ type ServicesPageProps = {
 
 async function getServices(category?: string): Promise<ServiceSummary[]> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    let query = supabase
-      .from("services")
-      .select(
-        "id, name, category, duration_minutes, price, thumbnail_url, is_active"
-      )
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      logger.error("Failed to load services", error, { category });
-      return [];
-    }
-
-    return (data ?? []) as ServiceSummary[];
+    const rows = await listPublicServices({ category });
+    return (rows ?? []) as unknown as ServiceSummary[];
   } catch (error) {
     logger.error("Unexpected error while loading services", error, {
       category,
@@ -42,7 +22,7 @@ async function getServices(category?: string): Promise<ServiceSummary[]> {
 }
 
 export default async function ServicesPage({ searchParams }: ServicesPageProps) {
-  const category = searchParams.category;
+  const { category } = (await searchParams) ?? {};
   const services = await getServices(category);
 
   const categories = Array.from(

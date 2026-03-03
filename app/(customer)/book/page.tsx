@@ -15,7 +15,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
     return null;
   }
 
-  const initialServiceId = searchParams.serviceId;
+  const { serviceId: initialServiceId } = (await searchParams) ?? {};
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

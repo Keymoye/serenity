@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/utils/logger";
 import type { BookingConfirmInput } from "@/lib/utils/validation";
 
@@ -60,27 +59,20 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = useMemo(() => getBrowserSupabaseClient(), []);
-
   // Load services once.
   useEffect(() => {
     const loadServices = async () => {
       setLoadingServices(true);
       setError(null);
       try {
-        const { data, error: svcError } = await supabase
-          .from("services")
-          .select("id, name, category, duration_minutes, is_active")
-          .eq("is_active", true)
-          .order("name", { ascending: true });
-
-        if (svcError) {
-          logger.error("Failed to load booking services", svcError);
+        const res = await fetch("/api/services");
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          logger.error("Failed to load booking services", body);
           setError("Unable to load services. Please try again.");
           return;
         }
-
-        setServices((data ?? []) as Service[]);
+        setServices((body ?? []) as Service[]);
       } catch (err) {
         logger.error("Unexpected error while loading booking services", err);
         setError("Something went wrong. Please try again.");
@@ -90,7 +82,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     };
 
     loadServices();
-  }, [supabase]);
+  }, []);
 
   // Load therapists when service changes.
   useEffect(() => {
@@ -103,25 +95,19 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
       setLoadingTherapists(true);
       setError(null);
       try {
-        const { data, error: thError } = await supabase
-          .from("therapist_service")
-          .select("therapists(id, name, title, is_active)")
-          .eq("service_id", selectedServiceId);
-
-        if (thError) {
-          logger.error("Failed to load therapists for service", thError, {
+        const res = await fetch(
+          `/api/services/${encodeURIComponent(selectedServiceId)}/therapists`,
+        );
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          logger.error("Failed to load therapists for service", body, {
             selectedServiceId,
           });
           setError("Unable to load therapists. Please try again.");
           return;
         }
 
-        type RawTherapistRow = { therapists: Therapist & { is_active?: boolean } };
-        const rows = (data ?? []) as unknown as RawTherapistRow[];
-        const therapistsList = rows
-          .map((row) => row.therapists)
-          .filter((t): t is Therapist => Boolean(t && t.is_active));
-
+        const therapistsList = (body ?? []) as Therapist[];
         setTherapists(therapistsList);
         setSelectedTherapistId(therapistsList[0]?.id ?? null);
       } catch (err) {
@@ -135,7 +121,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     };
 
     loadTherapists();
-  }, [selectedServiceId, supabase]);
+  }, [selectedServiceId]);
 
   // Load available time slots whenever service/therapist/date changes.
   useEffect(() => {

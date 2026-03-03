@@ -1,28 +1,13 @@
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import { MapEmbed } from "@/components/MapEmbed";
 import Link from "next/link";
+import { listFeaturedServices } from "@/lib/application/service.service";
 
 async function getFeaturedServices(): Promise<ServiceSummary[]> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { data, error } = await supabase
-      .from("services")
-      .select(
-        "id, name, category, duration_minutes, price, thumbnail_url, is_featured, is_active"
-      )
-      .eq("is_active", true)
-      .eq("is_featured", true)
-      .limit(6);
-
-    if (error) {
-      logger.error("Failed to load featured services", error);
-      return [];
-    }
-
-    return (data ?? []) as ServiceSummary[];
+    const rows = await listFeaturedServices();
+    return (rows ?? []) as unknown as ServiceSummary[];
   } catch (error) {
     logger.error("Unexpected error while loading featured services", error);
     return [];

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   resetPasswordConfirmSchema,
   type ResetPasswordConfirmInput,
@@ -25,6 +24,11 @@ const INITIAL_VALUES: ResetPasswordConfirmInput = {
 export default function ResetPasswordConfirmPage() {
   const router = useRouter();
 
+  const [tokens, setTokens] = useState<{
+    access_token: string;
+    refresh_token: string;
+  } | null>(null);
+
   const [state, setState] = useState<FormState>({
     values: INITIAL_VALUES,
     error: null,
@@ -33,27 +37,28 @@ export default function ResetPasswordConfirmPage() {
     isSessionReady: false,
   });
 
-  // Ensure that Supabase has a recovery session from the magic link.
+  // Validate the recovery link by checking for tokens in the URL hash.
   useEffect(() => {
-    const supabase = getBrowserSupabaseClient();
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const access_token = params.get("access_token") ?? "";
+    const refresh_token = params.get("refresh_token") ?? "";
 
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (error || !data.user) {
-        logger.error("No valid recovery session for password reset", error);
-        setState((prev) => ({
-          ...prev,
-          error:
-            "This password reset link is invalid or has expired. Please request a new one.",
-          isSessionReady: false,
-        }));
-        return;
-      }
-
+    if (!access_token || !refresh_token) {
       setState((prev) => ({
         ...prev,
-        isSessionReady: true,
+        error:
+          "This password reset link is invalid or has expired. Please request a new one.",
+        isSessionReady: false,
       }));
-    });
+      return;
+    }
+
+    setTokens({ access_token, refresh_token });
+    setState((prev) => ({
+      ...prev,
+      isSessionReady: true,
+    }));
   }, []);
 
   const handleChange =
@@ -88,17 +93,34 @@ export default function ResetPasswordConfirmPage() {
     }
 
     try {
-      const supabase = getBrowserSupabaseClient();
-
-      const { error } = await supabase.auth.updateUser({
-        password: parsed.data.password,
-      });
-
-      if (error) {
-        logger.error("Password reset confirmation failed", error);
+      if (!tokens) {
         setState((prev) => ({
           ...prev,
-          error: error.message || "Unable to update password.",
+          error:
+            "This password reset link is invalid or has expired. Please request a new one.",
+          isSubmitting: false,
+        }));
+        return;
+      }
+
+      const res = await fetch("/api/auth/reset-password/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          password: parsed.data.password,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Password reset confirmation failed", body);
+        setState((prev) => ({
+          ...prev,
+          error:
+            body.error ||
+            "This password reset link is invalid or has expired. Please request a new one.",
           isSubmitting: false,
         }));
         return;

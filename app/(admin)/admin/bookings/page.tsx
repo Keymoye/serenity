@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { adminBookingStatusSchema, type AdminBookingStatusInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 
@@ -13,26 +12,25 @@ type BookingRow = {
 };
 
 export default function AdminBookingsPage() {
-  const supabase = getBrowserSupabaseClient();
-
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("bookings").select("id, customer_name, status, created_at").order("created_at", { ascending: false });
-      if (error) {
-        logger.error("Failed to load bookings", error);
+      const res = await fetch("/api/admin/bookings");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        logger.error("Failed to load bookings", body);
         return;
       }
-      setBookings((data ?? []) as BookingRow[]);
+      setBookings((body ?? []) as BookingRow[]);
     } catch (err) {
       logger.error("Unexpected error loading bookings", err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadBookings();
@@ -47,9 +45,14 @@ export default function AdminBookingsPage() {
     }
 
     try {
-      const { error } = await supabase.from("bookings").update({ status: parsed.data.status }).eq("id", parsed.data.bookingId);
-      if (error) {
-        logger.error("Failed to update booking status", error, { bookingId });
+      const res = await fetch("/api/admin/bookings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: parsed.data.bookingId, status: parsed.data.status }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to update booking status", body, { bookingId });
         return;
       }
       await loadBookings();

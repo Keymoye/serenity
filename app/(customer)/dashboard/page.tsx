@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/services/authService";
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
+import { listCustomerBookings } from "@/lib/application/booking.service";
 
 type BookingRow = {
   id: string;
@@ -14,22 +14,11 @@ type BookingRow = {
 
 async function getCustomerBookings(profileId: string): Promise<BookingRow[]> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { data, error } = await supabase
-      .from("bookings")
-      .select(
-        "id, status, reference_code, notes, time_slots(start_time), services(name), therapists(name)"
-      )
-      .eq("customer_id", profileId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      logger.error("Failed to load customer bookings", error, { profileId });
-      return [];
-    }
-
-    return (data ?? []) as unknown as BookingRow[];
+    const rows = await listCustomerBookings({
+      userId: "unknown",
+      customerProfileId: profileId,
+    });
+    return (rows ?? []) as unknown as BookingRow[];
   } catch (error) {
     logger.error("Unexpected error while loading customer bookings", error, {
       profileId,

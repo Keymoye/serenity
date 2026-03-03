@@ -1,0 +1,83 @@
+import type { Therapist } from "../../domain/therapist.types";
+import { getSupabaseServerClient } from "./client";
+
+export interface TherapistRepository {
+  listTherapists(): Promise<Therapist[]>;
+  listActiveTherapists(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      title: string | null;
+      photo_url: string | null;
+      bio_short: string | null;
+    }>
+  >;
+  createTherapist(
+    payload: Omit<Therapist, "id" | "created_at">,
+  ): Promise<Therapist>;
+  updateTherapist(
+    id: string,
+    payload: Partial<Omit<Therapist, "id" | "created_at">>,
+  ): Promise<Therapist>;
+  deleteTherapist(id: string): Promise<void>;
+}
+
+export function createTherapistRepository(): TherapistRepository {
+  return {
+    async listTherapists() {
+      const supabase = await getSupabaseServerClient();
+      const { data, error } = await supabase
+        .from("therapists")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Therapist[];
+    },
+
+    async listActiveTherapists() {
+      const supabase = await getSupabaseServerClient();
+      const { data, error } = await supabase
+        .from("therapists")
+        .select("id, name, title, photo_url, bio_short, is_active")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any;
+    },
+
+    async createTherapist(
+      payload: Omit<Therapist, "id" | "created_at">,
+    ): Promise<Therapist> {
+      const supabase = await getSupabaseServerClient();
+      const { data, error } = await supabase
+        .from("therapists")
+        .insert(payload)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as Therapist;
+    },
+
+    async updateTherapist(
+      id: string,
+      payload: Partial<Omit<Therapist, "id" | "created_at">>,
+    ): Promise<Therapist> {
+      const supabase = await getSupabaseServerClient();
+      const { data, error } = await supabase
+        .from("therapists")
+        .update(payload)
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as Therapist;
+    },
+
+    async deleteTherapist(id: string): Promise<void> {
+      const supabase = await getSupabaseServerClient();
+      const { error } = await supabase.from("therapists").delete().eq("id", id);
+      if (error) throw error;
+    },
+  };
+}
+

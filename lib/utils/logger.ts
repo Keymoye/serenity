@@ -1,6 +1,7 @@
 type LogLevel = "debug" | "info" | "warn" | "error";
 
-interface LogContext {
+export interface LogContext {
+  correlationId?: string;
   [key: string]: unknown;
 }
 
@@ -10,30 +11,57 @@ function formatMessage(level: LogLevel, message: string, context?: LogContext) {
   return `${base} | ${JSON.stringify(context)}`;
 }
 
-export const logger = {
-  debug(message: string, context?: LogContext) {
-    if (process.env.NODE_ENV !== "production") {
-      console.debug(formatMessage("debug", message, context));
-    }
-  },
+interface Logger {
+  debug(message: string, context?: LogContext): void;
+  info(message: string, context?: LogContext): void;
+  warn(message: string, context?: LogContext): void;
+  error(message: string, error?: unknown, context?: LogContext): void;
+  withContext(baseContext: LogContext): Logger;
+}
 
-  info(message: string, context?: LogContext) {
-    console.info(formatMessage("info", message, context));
-  },
+function createLogger(baseContext: LogContext = {}): Logger {
+  return {
+    debug(message, context) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug(
+          formatMessage("debug", message, { ...baseContext, ...context }),
+        );
+      }
+    },
 
-  warn(message: string, context?: LogContext) {
-    console.warn(formatMessage("warn", message, context));
-  },
+    info(message, context) {
+      console.info(
+        formatMessage("info", message, { ...baseContext, ...context }),
+      );
+    },
 
-  error(message: string, error?: unknown, context?: LogContext) {
-    const mergedContext: LogContext = {
-      ...context,
-      error:
-        error instanceof Error
-          ? { name: error.name, message: error.message, stack: error.stack }
-          : error,
-    };
-    console.error(formatMessage("error", message, mergedContext));
-  },
-};
+    warn(message, context) {
+      console.warn(
+        formatMessage("warn", message, { ...baseContext, ...context }),
+      );
+    },
+
+    error(message, error, context) {
+      const mergedContext: LogContext = {
+        ...baseContext,
+        ...context,
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              }
+            : error,
+      };
+      console.error(formatMessage("error", message, mergedContext));
+    },
+
+    withContext(extraContext: LogContext): Logger {
+      return createLogger({ ...baseContext, ...extraContext });
+    },
+  };
+}
+
+export const logger: Logger = createLogger();
 

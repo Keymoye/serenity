@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   adminServiceSchema,
   type AdminServiceInput,
@@ -33,8 +32,6 @@ const INITIAL_FORM: AdminServiceInput = {
 };
 
 export default function AdminServicesPage() {
-  const supabase = getBrowserSupabaseClient();
-
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState>({
@@ -46,25 +43,20 @@ export default function AdminServicesPage() {
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("services")
-        .select(
-          "id, name, category, duration_minutes, price, is_active, updated_at"
-        )
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        logger.error("Failed to load admin services", error);
+      const res = await fetch("/api/admin/services");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to load admin services", body);
         return;
       }
-
+      const data = await res.json();
       setServices((data ?? []) as ServiceRow[]);
     } catch (error) {
       logger.error("Unexpected error while loading admin services", error);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadServices();
@@ -72,18 +64,16 @@ export default function AdminServicesPage() {
 
   const handleToggleActive = async (service: ServiceRow) => {
     try {
-      const { error } = await supabase
-        .from("services")
-        .update({ is_active: !service.is_active })
-        .eq("id", service.id);
-
-      if (error) {
-        logger.error("Failed to toggle service active", error, {
-          serviceId: service.id,
-        });
+      const res = await fetch("/api/admin/services", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: service.id, is_active: !service.is_active, name: service.name, category: service.category, duration_minutes: service.duration_minutes, price: service.price }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to toggle service active", body, { serviceId: service.id });
         return;
       }
-
       await loadServices();
     } catch (error) {
       logger.error("Unexpected error toggling service active", error, {
@@ -126,19 +116,21 @@ export default function AdminServicesPage() {
     }
 
     try {
-      const { error } = await supabase.from("services").insert({
-        name: parsed.data.name,
-        category: parsed.data.category || null,
-        duration_minutes: parsed.data.duration_minutes,
-        price: parsed.data.price,
-        is_active:
-          typeof parsed.data.is_active === "boolean"
-            ? parsed.data.is_active
-            : true,
+      const res = await fetch("/api/admin/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: parsed.data.name,
+          category: parsed.data.category || null,
+          duration_minutes: parsed.data.duration_minutes,
+          price: parsed.data.price,
+          is_active: typeof parsed.data.is_active === "boolean" ? parsed.data.is_active : true,
+        }),
       });
 
-      if (error) {
-        logger.error("Failed to create service", error);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        logger.error("Failed to create service", body);
         setForm((prev) => ({
           ...prev,
           error: "Unable to create service.",
