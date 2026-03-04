@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { BookingSummary } from "@/lib/domain/booking.types";
+import type { BookingSummary, BookingStatus } from "@/lib/domain/booking.types";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -85,7 +85,7 @@ export default function AdminBookingsPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // update local row
-      setBookings((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
+      setBookings((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus as BookingStatus } : r)));
       pushToast('success', 'Booking status updated');
     } catch (err) {
       console.error(err);
@@ -187,7 +187,7 @@ export default function AdminBookingsPage() {
                     <td className="px-3 py-2">{b.slot_start ? new Date(b.slot_start).toLocaleString() : '—'}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <Badge status={(b.status as string) ?? 'pending'} />
+                        <Badge status={b.status ?? 'pending'} />
                         <select value={b.status ?? 'pending'} onChange={(e) => handleStatusChange(b.id, e.target.value)} disabled={updatingId === b.id} className="ml-2 rounded-md border border-slate-300 px-2 py-1 text-sm">
                           <option value="confirmed">Confirmed</option>
                           <option value="pending">Pending</option>

@@ -60,8 +60,8 @@ export default function AdminSchedulePage() {
           {slots.map((s) => (
             <div key={s.id} className="p-3 bg-white rounded shadow flex justify-between items-center">
               <div>
-                <div className="font-semibold">{s.title}</div>
-                <div className="text-sm text-gray-500">{s.startsAt}</div>
+                <div className="font-semibold">{new Date(s.start_time).toLocaleString()}</div>
+                <div className="text-sm text-gray-500">{s.therapist_id}</div>
               </div>
               <button
                 className="text-red-600"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   registerSchema,
   type RegisterInput,
@@ -22,7 +22,6 @@ const INITIAL_VALUES: RegisterInput = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const { loading, error, call, setError } = useApi();
   const [values, setValues] = useState<RegisterInput>(INITIAL_VALUES);
@@ -54,7 +53,8 @@ export default function RegisterPage() {
         );
         return;
       }
-      const next = searchParams.get("next");
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
       router.push(next || "/dashboard");
     }
   };

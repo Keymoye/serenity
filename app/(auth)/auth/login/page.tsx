@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { loginSchema } from "@/lib/utils/validation";
 import type { LoginInput } from "@/lib/utils/validation";
 import { postJson, useApi } from "@/lib/utils/api";
@@ -15,9 +15,8 @@ const INITIAL_VALUES: LoginInput = {
   password: "",
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const { loading, error, call, setError } = useApi();
   const [values, setValues] = useState<LoginInput>(INITIAL_VALUES);
@@ -42,7 +41,9 @@ export default function LoginPage() {
     );
 
     if (success !== null) {
-      const next = searchParams.get("next");
+      // read 'next' query param client-side without hooks
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
       router.push(next || "/dashboard");
     }
   };
@@ -96,6 +97,14 @@ export default function LoginPage() {
         </Card>
       </div>
     </SectionWrapper>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
 

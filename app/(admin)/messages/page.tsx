@@ -111,7 +111,7 @@ export default function AdminMessagesPage() {
               <tbody className="divide-y divide-slate-100">
                 {items.map((m) => (
                   <tr key={m.id} className={`${m.is_read ? '' : 'font-medium'}`}>
-                    <td className="px-3 py-2">{m.name ?? '—'}</td>
+                    <td className="px-3 py-2">{m.full_name ?? '—'}</td>
                     <td className="px-3 py-2">{m.email ?? '—'}</td>
                     <td className="px-3 py-2">{m.subject ?? '—'}</td>
                     <td className="px-3 py-2">{m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>

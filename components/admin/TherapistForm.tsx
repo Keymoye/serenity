@@ -35,11 +35,11 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     setError(null);
     try {
       const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive) };
-      if ((initial as Partial<AdminTherapistInput>)?.id) {
+      if ((initial as TherapistInput)?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: (initial as Partial<AdminTherapistInput>).id, ...payload, bio_short: bio }),
+          body: JSON.stringify({ id: (initial as TherapistInput).id, ...payload, bio_short: bio }),
         });
       } else {
         await postJson(`/api/admin/therapists`, { ...payload, bio_short: bio });
