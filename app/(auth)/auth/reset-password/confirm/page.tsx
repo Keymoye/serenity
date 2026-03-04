@@ -6,9 +6,11 @@ import {
   resetPasswordConfirmSchema,
   type ResetPasswordConfirmInput,
 } from "@/lib/utils/validation";
-// logger not used here
 import { postJson, useApi } from "@/lib/utils/api";
-import { Spinner } from "@/components/ui/Spinner";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const INITIAL_VALUES: ResetPasswordConfirmInput = {
   password: "",
@@ -90,85 +92,57 @@ export default function ResetPasswordConfirmPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-semibold text-slate-900">
-          Choose a new password
-        </h1>
+    <SectionWrapper>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <h1 className="mb-6 text-2xl font-semibold text-slate-900">Choose a new password</h1>
 
-        {(error || tokenError) && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error || tokenError}
-          </div>
-        )}
+          {(error || tokenError) && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error || tokenError}
+            </div>
+          )}
 
-        {success && (
-          <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {success}
-          </div>
-        )}
+          {success && (
+            <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {success}
+            </div>
+          )}
 
-        {!isSessionReady && !tokenError && (
-          <p className="text-sm text-slate-600">
-            Validating your reset link...
-          </p>
-        )}
+          {!isSessionReady && !tokenError && (
+            <p className="text-sm text-slate-600">Validating your reset link...</p>
+          )}
 
-        {isSessionReady && !success && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1 block text-sm font-medium text-slate-700"
-              >
-                New password
-              </label>
-              <input
+          {isSessionReady && !success && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
                 id="password"
+                label="New password"
                 type="password"
                 autoComplete="new-password"
                 value={values.password}
                 onChange={handleChange("password")}
-                className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 required
               />
-            </div>
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1 block text-sm font-medium text-slate-700"
-              >
-                Confirm new password
-              </label>
-              <input
+              <Input
                 id="confirmPassword"
+                label="Confirm new password"
                 type="password"
                 autoComplete="new-password"
                 value={values.confirmPassword}
                 onChange={handleChange("confirmPassword")}
-                className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 required
               />
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-            >
-              {loading ? (
-                <>
-                  <Spinner size={4} /> Updating password...
-                </>
-              ) : (
-                "Update password"
-              )}
-            </button>
-          </form>
-        )}
+              <Button type="submit" variant="primary" loading={loading} className="w-full">
+                Update password
+              </Button>
+            </form>
+          )}
+        </Card>
       </div>
-    </div>
+    </SectionWrapper>
   );
 }
 

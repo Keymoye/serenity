@@ -6,7 +6,10 @@ import {
   type ResetPasswordRequestInput,
 } from "@/lib/utils/validation";
 import { useApi, postJson } from "@/lib/utils/api";
-import { Spinner } from "@/components/ui/Spinner";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const INITIAL_VALUES: ResetPasswordRequestInput = {
   email: "",
@@ -53,59 +56,41 @@ export default function ResetPasswordRequestPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-semibold text-slate-900">
-          Reset password
-        </h1>
+    <SectionWrapper>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <h1 className="mb-6 text-2xl font-semibold text-slate-900">Reset password</h1>
 
-        {error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        {success && (
-          <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {success}
-          </div>
-        )}
+          {success && (
+            <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {success}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Email
-            </label>
-            <input
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
               id="email"
+              label="Email"
               type="email"
               autoComplete="email"
               value={values.email}
               onChange={handleChange}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               required
             />
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-          >
-            {loading ? (
-              <>
-                <Spinner size={4} /> Sending reset link...
-              </>
-            ) : (
-              "Send reset link"
-            )}
-          </button>
-        </form>
+            <Button type="submit" variant="primary" loading={loading} className="w-full">
+              Send reset link
+            </Button>
+          </form>
+        </Card>
       </div>
-    </div>
+    </SectionWrapper>
   );
 }
 

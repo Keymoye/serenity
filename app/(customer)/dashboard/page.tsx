@@ -1,6 +1,12 @@
-import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
+import { requireCustomer } from "@/lib/services/authService";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { logger } from "@/lib/utils/logger";
 import { listCustomerBookings } from "@/lib/application/booking.service";
+import Link from "next/link";
+import { PageHero } from "@/components/layout/PageHero";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
+import CancelBookingButton from "@/components/booking/CancelBookingButton";
 
 type BookingRow = {
   id: string;
@@ -12,10 +18,10 @@ type BookingRow = {
   therapists: { name: string }[] | null;
 };
 
-async function getCustomerBookings(profileId: string): Promise<BookingRow[]> {
+async function getCustomerBookings(profileId: string, userId?: string): Promise<BookingRow[]> {
   try {
     const rows = await listCustomerBookings({
-      userId: "unknown",
+      userId: userId ?? undefined,
       customerProfileId: profileId,
     });
     return (rows ?? []) as unknown as BookingRow[];
@@ -28,13 +34,10 @@ async function getCustomerBookings(profileId: string): Promise<BookingRow[]> {
 }
 
 export default async function DashboardPage() {
-  const current = await getCurrentUser();
-  if (!current) {
-    // Middleware protects this route; this is just a guard.
-    return null;
-  }
+  const current = await requireCustomer();
+  if (!current) return null;
 
-  const bookings = await getCustomerBookings(current.profile.id);
+  const bookings = await getCustomerBookings(current.profile.id, current.user?.id);
 
   const now = new Date();
   const upcoming: BookingRow[] = [];
@@ -51,35 +54,7 @@ export default async function DashboardPage() {
     }
   }
 
-  const renderStatusBadge = (status: string) => {
-    const normalized = status.toLowerCase();
-    if (normalized === "confirmed") {
-      return (
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-          Confirmed
-        </span>
-      );
-    }
-    if (normalized === "cancelled") {
-      return (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-          Cancelled
-        </span>
-      );
-    }
-    if (normalized === "pending") {
-      return (
-        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-          Pending
-        </span>
-      );
-    }
-    return (
-      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-        {status}
-      </span>
-    );
-  };
+  const renderStatusBadge = (status: string) => <Badge status={status === 'confirmed' ? 'confirmed' : status === 'pending' ? 'pending' : status === 'cancelled' ? 'cancelled' : 'available'} />;
 
   const renderList = (items: BookingRow[]) => {
     if (items.length === 0) {
@@ -128,6 +103,8 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 {renderStatusBadge(booking.status)}
+                {/* client island for cancellation */}
+                <CancelBookingButton id={booking.id} />
               </div>
             </li>
           );
@@ -136,31 +113,71 @@ export default async function DashboardPage() {
     );
   };
 
+  // Statistics
+  const total = bookings.length;
+  const upcomingCount = upcoming.length;
+  const lastVisit = past
+    .filter((b) => b.time_slots?.[0]?.start_time)
+    .map((b) => new Date(b.time_slots![0].start_time))
+    .sort((a, z) => +z - +a)[0];
+
+  if (total === 0) {
+    return (
+      <SectionWrapper>
+        <div className="space-y-6">
+          <PageHero title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} subtitle="Book your first treatment and start relaxing." ctaLabel="Book now" ctaHref="/book" />
+
+          <EmptyState title="No bookings yet" message="You don’t have any bookings. When you do, they’ll appear here." ctaLabel="Book now" onCta={() => { window.location.href = '/book'; }} />
+        </div>
+      </SectionWrapper>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Your bookings
-        </h1>
-        <p className="text-sm text-slate-700">
-          View upcoming treatments and your past visits.
-        </p>
-      </header>
+    <SectionWrapper>
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Welcome back, {current.profile?.name?.split(" ")[0] ?? 'Guest'}</h1>
+          <p className="text-sm text-slate-700">Manage your bookings and appointments.</p>
+        </header>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">
-          Upcoming
-        </h2>
-        {renderList(upcoming)}
-      </section>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Total bookings</p>
+            <p className="text-2xl font-semibold text-slate-900">{total}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Upcoming</p>
+            <p className="text-2xl font-semibold text-slate-900">{upcomingCount}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Last visit</p>
+            <p className="text-2xl font-semibold text-slate-900">{lastVisit ? lastVisit.toLocaleDateString() : '—'}</p>
+          </div>
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">
-          Past
-        </h2>
-        {renderList(past)}
-      </section>
-    </div>
+        <section>
+          <h2 className="text-lg font-semibold text-slate-900">Upcoming appointments</h2>
+          {renderList(upcoming)}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-slate-900">Past visits</h2>
+          <details className="mt-2 rounded-2xl border border-slate-200 bg-white p-4">
+            <summary className="cursor-pointer text-sm text-slate-700">Show recent visits</summary>
+            <div className="mt-3">{renderList(past.slice(0,5))}</div>
+          </details>
+        </section>
+
+        <div className="mt-6 rounded-2xl bg-brand-50 p-6 text-center">
+          <h3 className="text-lg font-semibold text-spa-charcoal">Ready for your next session?</h3>
+          <p className="text-sm text-stone-700">Book a treatment with our therapists today.</p>
+          <div className="mt-3">
+            <Link href="/book" className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">Book now</Link>
+          </div>
+        </div>
+      </div>
+    </SectionWrapper>
   );
 }
 

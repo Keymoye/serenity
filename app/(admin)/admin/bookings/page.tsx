@@ -1,75 +1,112 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { adminBookingStatusSchema, type AdminBookingStatusInput } from "@/lib/utils/validation";
-import { apiFetch } from "@/lib/utils/api";
-import { Spinner } from "@/components/ui/Spinner";
+import React, { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
+import { pushToast } from "@/components/ui/Toast";
 
-type BookingRow = {
-  id: string;
-  customer_name: string;
-  status: string;
-  created_at: string | null;
-};
+type BookingRow = any;
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
+
+  // filters
+  const [statusFilter, setStatusFilter] = useState("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const limit = 20;
+  const [searchRef, setSearchRef] = useState<string>("");
 
-  const loadBookings = useCallback(async () => {
+  // per-row updating / deleting
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
     setLoading(true);
     setError(null);
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/bookings");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        if (!mounted) return;
+        setBookings(body ?? []);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load bookings");
+        pushToast("error", "Failed to load bookings");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const filtered = useMemo(() => {
+    return bookings.filter((b) => {
+      if (statusFilter !== "all" && (b.status ?? "pending") !== statusFilter) return false;
+      const slot = b.slot_start ?? b.created_at ?? null;
+      if (startDate) {
+        const d = new Date(startDate);
+        if (!slot || new Date(slot) < d) return false;
+      }
+      if (endDate) {
+        const d = new Date(endDate);
+        d.setHours(23,59,59,999);
+        if (!slot || new Date(slot) > d) return false;
+      }
+      if (searchRef) {
+        const rc = (b.reference_code ?? "").toLowerCase();
+        if (!rc.includes(searchRef.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [bookings, statusFilter, startDate, endDate, searchRef]);
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    setUpdatingId(id);
     try {
-      const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(page * limit),
+      const res = await fetch('/api/admin/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: id, status: newStatus }),
       });
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      const body = await apiFetch(`/api/admin/bookings?${params.toString()}`);
-      setBookings((body ?? []) as BookingRow[]);
-    } catch {
-      setError("Failed to load bookings");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // update local row
+      setBookings((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
+      pushToast('success', 'Booking status updated');
+    } catch (err) {
+      console.error(err);
+      pushToast('error', 'Failed to update booking status');
     } finally {
-      setLoading(false);
+      setUpdatingId(null);
     }
-  }, [page, startDate, endDate]);
+  };
 
-  // reload whenever page or filters change
-  useEffect(() => {
-    void loadBookings();
-  }, [loadBookings]);
+  const confirmDelete = (id: string) => {
+    setDeletingId(id);
+    setConfirmOpen(true);
+  };
 
-  // if filters change, reset to first page
-  useEffect(() => {
-    setPage(0);
-  }, [startDate, endDate]);
-
-  const handleUpdateStatus = async (bookingId: string, status: string) => {
-    const payload: AdminBookingStatusInput = { bookingId, status: status as "confirmed" | "cancelled" | "pending" };
-    const parsed = adminBookingStatusSchema.safeParse(payload);
-    if (!parsed.success) {
-      setError("Invalid booking status");
-      return;
-    }
-
-    setUpdating(bookingId);
+  const doDelete = async () => {
+    if (!deletingId) return setConfirmOpen(false);
+    const id = deletingId;
+    setConfirmOpen(false);
     try {
-      await apiFetch("/api/admin/bookings", {
-        method: "PUT",
-        body: JSON.stringify({ bookingId: parsed.data.bookingId, status: parsed.data.status }),
-      });
-      await loadBookings();
-    } catch {
-      setError("Failed to update booking status");
+      const res = await fetch(`/api/admin/bookings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setBookings((prev) => prev.filter((r) => r.id !== id));
+      pushToast('success', 'Booking deleted');
+    } catch (err) {
+      console.error(err);
+      pushToast('error', 'Failed to delete booking');
     } finally {
-      setUpdating(null);
+      setDeletingId(null);
     }
   };
 
@@ -81,95 +118,90 @@ export default function AdminBookingsPage() {
       </header>
 
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">Recent bookings</h2>
-        <div className="mt-2 flex flex-wrap gap-4 items-end">
+        <div className="mb-3 grid gap-3 sm:grid-cols-4">
           <div>
-            <label className="block text-xs text-slate-600">
-              From
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1 block rounded-md border border-slate-300 px-2 py-1 text-sm"
-              />
+            <label className="block text-xs text-slate-600">Status
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1 text-sm">
+                <option value="all">All</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </label>
           </div>
           <div>
-            <label className="block text-xs text-slate-600">
-              To
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1 block rounded-md border border-slate-300 px-2 py-1 text-sm"
-              />
+            <label className="block text-xs text-slate-600">From
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
             </label>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-            }}
-            className="text-xs text-sky-600 hover:underline"
-          >
-            Clear filters
-          </button>
+          <div>
+            <label className="block text-xs text-slate-600">To
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+            </label>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600">Reference
+              <input type="text" placeholder="Search ref" value={searchRef} onChange={(e) => setSearchRef(e.target.value)} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+            </label>
+          </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white mt-2">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
-              <tr>
-                <th className="px-3 py-2 text-left">Customer</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Created</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-center"><Spinner /></td></tr>
-              ) : error ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-sm text-red-600">{error}</td></tr>
-              ) : bookings.length === 0 ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-sm text-slate-600">No bookings yet.</td></tr>
-              ) : (
-                bookings.map((b) => (
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton variant="table-row" />
+            <Skeleton variant="table-row" />
+            <Skeleton variant="table-row" />
+          </div>
+        ) : error ? (
+          <div className="text-sm text-red-600">{error}</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState title="No bookings" message="No bookings match your filters." />
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 text-left">Reference</th>
+                  <th className="px-3 py-2 text-left">Customer</th>
+                  <th className="px-3 py-2 text-left">Service</th>
+                  <th className="px-3 py-2 text-left">Therapist</th>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((b) => (
                   <tr key={b.id}>
-                    <td className="px-3 py-2 font-medium text-slate-900">{b.customer_name}</td>
-                    <td className="px-3 py-2 text-slate-700">{b.status}</td>
-                    <td className="px-3 py-2 text-slate-700">{b.created_at ?? "—"}</td>
+                    <td className="px-3 py-2">{b.reference_code ?? b.id}</td>
+                    <td className="px-3 py-2">{b.customer_email ?? b.customer_name ?? '—'}</td>
+                    <td className="px-3 py-2">{b.service_name ?? '—'}</td>
+                    <td className="px-3 py-2">{b.therapist_name ?? '—'}</td>
+                    <td className="px-3 py-2">{b.slot_start ? new Date(b.slot_start).toLocaleString() : '—'}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <Badge status={(b.status as any) ?? 'pending'} />
+                        <select value={b.status ?? 'pending'} onChange={(e) => handleStatusChange(b.id, e.target.value)} disabled={updatingId === b.id} className="ml-2 rounded-md border border-slate-300 px-2 py-1 text-sm">
+                          <option value="confirmed">Confirmed</option>
+                          <option value="pending">Pending</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <div className="flex items-center gap-2 justify-end">
-                        <button type="button" onClick={() => handleUpdateStatus(b.id, "confirmed")} disabled={updating === b.id} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">{updating === b.id ? <Spinner /> : "Confirm"}</button>
-                        <button type="button" onClick={() => handleUpdateStatus(b.id, "cancelled")} disabled={updating === b.id} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed">{updating === b.id ? <Spinner /> : "Cancel"}</button>
+                      <div className="flex items-center justify-end gap-2">
+                        <a href={`/admin/bookings/${b.id}`} className="text-sky-600">View</a>
+                        <button onClick={() => confirmDelete(b.id)} className="text-red-600">Delete</button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* pagination controls */}
-        <div className="mt-4 flex justify-between">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(p - 1, 0))}
-            disabled={page === 0}
-            className="rounded-md border px-3 py-1 text-sm text-slate-700 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            className="rounded-md border px-3 py-1 text-sm text-slate-700"
-          >
-            Next
-          </button>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <ConfirmDialog open={confirmOpen} title="Delete booking" description="Are you sure you want to delete this booking?" onCancel={() => setConfirmOpen(false)} onConfirm={doDelete} />
       </section>
     </div>
   );

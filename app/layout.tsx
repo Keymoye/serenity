@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
-import { LogoutButton } from "@/components/layout/LogoutButton";
+import { requireCurrentUser } from "@/lib/services/authService";
+import { SpaNavbar } from "@/components/layout/SpaNavbar";
+import { SpaFooter } from "@/components/layout/SpaFooter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,103 +26,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const current = await getCurrentUser();
-  const isAuthenticated = Boolean(current);
-  const isAdmin = current?.profile.role === "admin";
-
+  const current = await requireCurrentUser().catch(() => null);
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}
-      >
-        <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight">
-                Serenity Spa
-              </span>
-            </Link>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-spa-cream text-slate-900`}>
+        <SpaNavbar current={current} />
 
-            <nav className="hidden items-center gap-4 text-sm text-slate-700 md:flex">
-              <Link href="/" className="hover:text-sky-700">
-                Home
-              </Link>
-              <Link href="/services" className="hover:text-sky-700">
-                Services
-              </Link>
-              <Link href="/about" className="hover:text-sky-700">
-                About
-              </Link>
-              <Link href="/contact" className="hover:text-sky-700">
-                Contact
-              </Link>
-            </nav>
+        <main className="mx-auto min-h-screen max-w-6xl px-4 py-6">{children}</main>
 
-            <div className="flex items-center gap-2 text-xs md:text-sm">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
-                  >
-                    Profile
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block"
-                    >
-                      Admin
-                    </Link>
-                  )}
-                  <LogoutButton />
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="hidden rounded-full bg-sky-600 px-3 py-1 font-medium text-white shadow-sm hover:bg-sky-700 md:inline-block"
-                  >
-                    Sign up
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <main className="mx-auto min-h-screen max-w-6xl px-4 py-6">
-          {children}
-        </main>
-
-        <footer className="border-t border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-            <p>
-              © {new Date().getFullYear()} Serenity Spa. All rights reserved.
-            </p>
-            <p>
-              123 Tranquility Lane, Wellness City ·{" "}
-              <a
-                href="mailto:hello@serenityspa.example"
-                className="font-medium text-sky-700 hover:underline"
-              >
-                hello@serenityspa.example
-              </a>
-            </p>
-          </div>
-        </footer>
+        <SpaFooter />
       </body>
     </html>
   );

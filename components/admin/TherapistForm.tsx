@@ -6,7 +6,10 @@ import { Spinner } from "@/components/ui/Spinner";
 type TherapistInput = {
   id?: string;
   name?: string;
+  title?: string | null;
+  photo_url?: string | null;
   bio?: string | null;
+  is_active?: boolean | null;
   [key: string]: unknown;
 };
 
@@ -17,7 +20,10 @@ type Props = {
 
 export default function TherapistForm({ initial, onSaved }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [photoUrl, setPhotoUrl] = useState(initial?.photo_url ?? "");
   const [bio, setBio] = useState(initial?.bio ?? "");
+  const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +32,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const payload = { name, bio };
+      const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive) };
       if (initial?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
@@ -38,6 +44,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
       }
       // Call parent callback to refresh list or close modal
       onSaved?.();
+      setLoading(false);
     } catch (err: unknown) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Failed to save therapist");
@@ -57,6 +64,14 @@ export default function TherapistForm({ initial, onSaved }: Props) {
         />
       </div>
       <div>
+        <label className="block text-sm font-medium text-slate-700">Title</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700">Photo URL</label>
+        <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+      </div>
+      <div>
         <label className="block text-sm font-medium text-slate-700">Bio</label>
         <textarea
           value={bio ?? ""}
@@ -64,6 +79,12 @@ export default function TherapistForm({ initial, onSaved }: Props) {
           className="mt-1 block w-full rounded-md border-gray-200 shadow-sm"
           rows={3}
         />
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+          <span className="text-sm text-slate-700">Active</span>
+        </label>
       </div>
       <div>
         <button
