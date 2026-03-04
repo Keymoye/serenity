@@ -229,6 +229,18 @@ export async function createTimeSlotAdmin(
   });
 }
 
+export async function deleteTimeSlotAdmin(
+  id: string,
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps(),
+) {
+  assertAdmin(context);
+  if (!id) {
+    throw new ValidationError("Time slot id is required.");
+  }
+  await deps.timeSlotRepo.deleteTimeSlot(id);
+}
+
 // Messages
 
 export async function listMessagesAdmin(

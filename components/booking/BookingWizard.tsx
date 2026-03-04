@@ -228,7 +228,7 @@ export function BookingWizard({
       setRemainingSeconds(Math.ceil((expiry - Date.now()) / 1000));
       pushToast("success", "Time slot locked for 15 minutes");
     } catch (err: unknown) {
-      logger.warn("Slot lock failed", err);
+      logger.warn("Slot lock failed", { error: String(err) });
 
       const bodyCode = (err as { body?: { code?: unknown } } | null)?.body?.code;
       if (bodyCode === "SLOT_TAKEN") {

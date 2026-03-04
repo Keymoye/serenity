@@ -1,5 +1,6 @@
 import { InternalError } from "../domain/errors";
 import { createServiceRepository, type ServiceRepository } from "../infra/supabase/service.repo";
+import { createTherapistRepository } from "../infra/supabase/therapist.repo";
 
 export interface ServiceDependencies {
   serviceRepo: ServiceRepository;
@@ -68,8 +69,8 @@ export async function getTherapistDetail(
   deps: ServiceDependencies = createDefaultDeps(),
 ) {
   try {
-    // fetch all active therapists from repository and find matching
-    const therapists = await deps.serviceRepo.listActiveTherapists();
+    // fetch active therapists from therapist repository and find matching
+    const therapists = await createTherapistRepository().listActiveTherapists();
     const therapist = therapists.find((t) => t.id === input.therapistId);
     if (!therapist) return null;
     const services = await deps.serviceRepo.listServicesForTherapist(input.therapistId);

@@ -6,7 +6,7 @@ import React, { useState } from "react";
 
 interface CurrentUser {
   user?: { email?: string };
-  profile?: { name?: string };
+  profile?: { name?: string | null };
 }
 
 export default function AdminSidebar({ current }: { current?: CurrentUser }) {

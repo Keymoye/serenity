@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import type { Therapist } from "@/lib/domain/therapist.types";
 import { apiFetch } from "@/lib/utils/api";
 import TherapistForm from "./TherapistForm";
+import type { AdminTherapistInput } from "@/lib/domain/admin.types";
 import { logger } from "@/lib/utils/logger";
 
 type Props = {
@@ -49,7 +50,7 @@ export default function TherapistsList({ initialTherapists }: Props) {
         <li key={t.id}>
           <strong>{t.name}</strong> — {t.bio_short || t.title}
           <div>
-            <TherapistForm initial={t as Therapist} onSaved={handleTherapistSaved} />
+            <TherapistForm initial={t as Partial<AdminTherapistInput>} onSaved={handleTherapistSaved} />
             <button
               onClick={() => handleDelete(t.id)}
               className="mt-2 rounded bg-red-600 px-2 py-1 text-sm text-white hover:bg-red-700"

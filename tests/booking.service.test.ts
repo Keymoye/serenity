@@ -7,13 +7,18 @@ import {
 } from "@/lib/application/booking.service";
 import { ConflictError, ValidationError } from "@/lib/domain/errors";
 
-function createDeps(overrides: Partial<any> = {}) {
+function createDeps(overrides: Partial<any> = {}): any {
   return {
     timeSlotRepo: {
       findForTherapistOnDate: vi.fn().mockResolvedValue([]),
       lockSlot: vi.fn().mockResolvedValue(true),
       tryMarkAsBooked: vi.fn().mockResolvedValue(true),
       setAvailable: vi.fn().mockResolvedValue(undefined),
+      // stubs for newer TimeSlotRepository surface
+      findById: vi.fn(),
+      listTimeSlots: vi.fn(),
+      createTimeSlot: vi.fn(),
+      deleteTimeSlot: vi.fn(),
     },
     bookingRepo: {
       createBooking: vi.fn().mockResolvedValue({ id: "b1" }),

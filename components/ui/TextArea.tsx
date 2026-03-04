@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -11,7 +11,8 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ label, maxLength = 500, hint, error, id, className = '', ...rest }, ref) => {
-    const aid = id ?? `textarea-${Math.random().toString(36).slice(2,8)}`;
+    const generatedId = useId();
+    const aid = id ?? generatedId;
     const hintId = `${aid}-hint`;
     const errorId = `${aid}-error`;
     const describedBy = [] as string[];

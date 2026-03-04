@@ -4,7 +4,7 @@ import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { adminTimeSlotCreateSchema } from "@/lib/domain/admin.types";
-import { listTimeSlotsAdmin, createTimeSlotAdmin } from "@/lib/application/admin.service";
+import { listTimeSlotsAdmin, createTimeSlotAdmin, deleteTimeSlotAdmin } from "@/lib/application/admin.service";
 
 export async function GET() {
   const correlationId = randomUUID();
@@ -66,6 +66,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     log.error("POST /api/admin/time-slots failed", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "admin.timeSlots.DELETE" });
+
+  try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json(
+        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
+        { status: 401 },
+      );
+    }
+
+    const body = await req.json();
+    const id = body?.timeSlotId || body?.id;
+    if (!id || typeof id !== "string") {
+      return NextResponse.json(
+        { error: "Missing timeSlotId", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
+    await deleteTimeSlotAdmin(
+      id,
+      { userId: current.user.id, role: current.profile.role },
+    );
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    log.error("DELETE /api/admin/time-slots failed", error);
     const { status, body } = mapErrorToLegacyHttp(error);
     return NextResponse.json(body, { status });
   }

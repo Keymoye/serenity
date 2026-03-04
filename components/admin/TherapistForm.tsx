@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 
+import type { AdminTherapistInput } from "@/lib/domain/admin.types";
+
 type TherapistInput = {
   id?: string;
   name?: string;
@@ -14,7 +16,7 @@ type TherapistInput = {
 };
 
 type Props = {
-  initial?: TherapistInput | null;
+  initial?: Partial<AdminTherapistInput> | null | undefined;
   onSaved?: () => void;
 };
 
@@ -22,7 +24,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [photoUrl, setPhotoUrl] = useState(initial?.photo_url ?? "");
-  const [bio, setBio] = useState(initial?.bio ?? "");
+  const [bio, setBio] = useState(initial?.bio_short ?? "");
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,14 +35,14 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     setError(null);
     try {
       const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive) };
-      if (initial?.id) {
+      if ((initial as Partial<AdminTherapistInput>)?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: initial.id, ...payload }),
+          body: JSON.stringify({ id: (initial as Partial<AdminTherapistInput>).id, ...payload, bio_short: bio }),
         });
       } else {
-        await postJson(`/api/admin/therapists`, payload);
+        await postJson(`/api/admin/therapists`, { ...payload, bio_short: bio });
       }
       // Call parent callback to refresh list or close modal
       onSaved?.();

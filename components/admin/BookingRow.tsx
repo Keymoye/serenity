@@ -44,7 +44,7 @@ export default function BookingRow({
   return (
     <div>
       <div>
-        <strong>{booking.customer_name}</strong> — {booking.date} {booking.time} ({booking.service_id})
+        <strong>{booking.customer_id ?? ""}</strong> — {booking.created_at ?? ""} (slot {booking.time_slot_id ?? ""}) ({booking.service_id ?? ""})
       </div>
       <div>
         <span>Status: {status}</span>

@@ -6,6 +6,7 @@ export interface TimeSlotRepository {
   findForTherapistOnDate(therapistId: string, startOfDayIso: string, endOfDayIso: string): Promise<TimeSlot[]>;
   listTimeSlots(): Promise<TimeSlot[]>;
   createTimeSlot(payload: { therapist_id: string; start_time: string; end_time: string }): Promise<void>;
+  deleteTimeSlot(id: string): Promise<void>;
   lockSlot(timeSlotId: string, lockUntilIso: string, nowIso: string): Promise<boolean>;
   tryMarkAsBooked(timeSlotId: string): Promise<boolean>;
   setAvailable(timeSlotId: string): Promise<void>;
@@ -50,6 +51,12 @@ export function createTimeSlotRepository(): TimeSlotRepository {
     async createTimeSlot(payload) {
       const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("time_slots").insert(payload);
+      if (error) throw error;
+    },
+
+    async deleteTimeSlot(id) {
+      const supabase = await getSupabaseAdminClient();
+      const { error } = await supabase.from("time_slots").delete().eq("id", id);
       if (error) throw error;
     },
 

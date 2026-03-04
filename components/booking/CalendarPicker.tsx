@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 
 interface CalendarPickerProps {
   selectedDate: string;
@@ -9,19 +9,7 @@ interface CalendarPickerProps {
 
 // simple month calendar; doesn't handle localization or week start days
 export function CalendarPicker({ selectedDate, onSelectDate }: CalendarPickerProps) {
-  const [displayMonth, setDisplayMonth] = useState<Date>(() => {
-    if (selectedDate) {
-      return new Date(selectedDate);
-    }
-    return new Date();
-  });
-
-  // when parent changes selectedDate from outside, sync displayMonth
-  useEffect(() => {
-    if (selectedDate) {
-      setDisplayMonth(new Date(selectedDate));
-    }
-  }, [selectedDate]);
+  const displayMonth = useMemo(() => (selectedDate ? new Date(selectedDate) : new Date()), [selectedDate]);
 
   const year = displayMonth.getFullYear();
   const month = displayMonth.getMonth(); // 0-indexed
@@ -55,11 +43,7 @@ export function CalendarPicker({ selectedDate, onSelectDate }: CalendarPickerPro
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
-          onClick={() =>
-            setDisplayMonth(
-              new Date(year, month - 1, 1),
-            )
-          }
+          onClick={() => onSelectDate(new Date(year, month - 1, 1).toISOString().slice(0,10))}
           className="text-slate-600 hover:text-slate-800 p-1 rounded-full hover:bg-slate-100"
           aria-label="Previous month"
         >
@@ -70,11 +54,7 @@ export function CalendarPicker({ selectedDate, onSelectDate }: CalendarPickerPro
         </div>
         <button
           type="button"
-          onClick={() =>
-            setDisplayMonth(
-              new Date(year, month + 1, 1),
-            )
-          }
+          onClick={() => onSelectDate(new Date(year, month + 1, 1).toISOString().slice(0,10))}
           className="text-slate-600 hover:text-slate-800 p-1 rounded-full hover:bg-slate-100"
           aria-label="Next month"
         >

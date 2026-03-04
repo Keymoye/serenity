@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import type { CurrentUser } from '@/lib/infra/supabase/currentUser';
 
 interface SpaNavbarProps {
-  current?: any;
+  current?: CurrentUser | null;
 }
 
 export function SpaNavbar({ current }: SpaNavbarProps) {

@@ -1,5 +1,12 @@
-import type { ScheduleItem } from "../db/schedule";
 import { getSupabaseAdminClient } from "./adminClient";
+
+type ScheduleItem = {
+  id: string;
+  date: string;
+  title?: string | null;
+  created_at?: string | null;
+  [key: string]: unknown;
+};
 
 export interface ScheduleRepository {
   listSchedule(): Promise<ScheduleItem[]>;

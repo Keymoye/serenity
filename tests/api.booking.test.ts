@@ -38,8 +38,8 @@ describe("API layer – booking routes with mocked services", () => {
   // --- availability ---
   describe("POST /api/booking/availability", () => {
     it("returns slots when service succeeds", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u1" }, profile: { id: "p1" } });
-      (getAvailability as vi.Mock<any>).mockResolvedValue([{ id: "1" }]);
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u1" }, profile: { id: "p1" } });
+      (getAvailability as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "1" }]);
 
       const res = await availabilityPOST(makeRequest({ serviceId: "s", therapistId: "t", date: "2026-03-03" }));
       expect(res.status).toBe(200);
@@ -48,14 +48,14 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("returns 401 when user is unauthorized", async () => {
-      (getCurrentUser as jest.Mock).mockResolvedValue(null);
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       const res = await availabilityPOST(makeRequest({}));
       expect(res.status).toBe(401);
     });
 
     it("maps service ValidationError to 400", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
-      (getAvailability as vi.Mock<any>).mockRejectedValue(new ValidationError("bad"));
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (getAvailability as ReturnType<typeof vi.fn>).mockRejectedValue(new ValidationError("bad"));
       const res = await availabilityPOST(makeRequest({ serviceId: "", therapistId: "" }));
       expect(res.status).toBe(400);
       const json = await res.json();
@@ -66,8 +66,8 @@ describe("API layer – booking routes with mocked services", () => {
   // --- lock ---
   describe("POST /api/booking/lock", () => {
     it("responds success when lockSlot resolves", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
-      (lockSlot as vi.Mock<any>).mockResolvedValue(undefined);
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (lockSlot as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
       const res = await lockPOST(makeRequest({ timeSlotId: "ts1" }));
       expect(res.status).toBe(200);
       const json = await res.json();
@@ -75,8 +75,8 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("maps service ConflictError to 409", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
-      (lockSlot as vi.Mock<any>).mockRejectedValue(new ConflictError("SLOT_TAKEN"));
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (lockSlot as ReturnType<typeof vi.fn>).mockRejectedValue(new ConflictError("SLOT_TAKEN"));
       const res = await lockPOST(makeRequest({ timeSlotId: "ts1" }));
       expect(res.status).toBe(409);
       const json = await res.json();
@@ -84,7 +84,7 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("returns 401 when unauthenticated", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue(null);
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       const res = await lockPOST(makeRequest({ timeSlotId: "ts1" }));
       expect(res.status).toBe(401);
     });
@@ -93,8 +93,8 @@ describe("API layer – booking routes with mocked services", () => {
   // --- confirm ---
   describe("POST /api/booking/confirm", () => {
     it("validates body and returns booking when service succeeds", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
-      (confirmBooking as vi.Mock<any>).mockResolvedValue({ booking: { id: "b" }, referenceCode: "XYZ" });
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (confirmBooking as ReturnType<typeof vi.fn>).mockResolvedValue({ booking: { id: "b" }, referenceCode: "XYZ" });
       const res = await confirmPOST(makeRequest({ serviceId: "s", therapistId: "t", timeSlotId: "ts" }));
       expect(res.status).toBe(200);
       const json = await res.json();
@@ -103,7 +103,7 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("returns 400 when body fails Zod validation", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
       const res = await confirmPOST(makeRequest({ serviceId: "" }));
       expect(res.status).toBe(400);
       const json = await res.json();
@@ -111,8 +111,8 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("maps service error to status", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
-      (confirmBooking as vi.Mock<any>).mockRejectedValue(new ConflictError("SLOT_ALREADY_BOOKED"));
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { id: "p" } });
+      (confirmBooking as ReturnType<typeof vi.fn>).mockRejectedValue(new ConflictError("SLOT_ALREADY_BOOKED"));
       const res = await confirmPOST(makeRequest({ serviceId: "s", therapistId: "t", timeSlotId: "ts" }));
       expect(res.status).toBe(409);
       const json = await res.json();
@@ -120,7 +120,7 @@ describe("API layer – booking routes with mocked services", () => {
     });
 
     it("returns 401 when unauthenticated", async () => {
-      (getCurrentUser as vi.Mock<any>).mockResolvedValue(null);
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       const res = await confirmPOST(makeRequest({ serviceId: "s" }));
       expect(res.status).toBe(401);
     });

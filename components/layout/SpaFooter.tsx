@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export function SpaFooter() {
   return (
     <footer className="border-t border-slate-200 bg-white">
@@ -11,9 +13,9 @@ export function SpaFooter() {
           <div>
             <h4 className="text-xs font-semibold text-slate-900">Company</h4>
             <ul className="mt-2 space-y-1 text-xs text-slate-600">
-              <li><a href="/about" className="hover:underline">About</a></li>
-              <li><a href="/services" className="hover:underline">Services</a></li>
-              <li><a href="/contact" className="hover:underline">Contact</a></li>
+              <li><Link href="/about" className="hover:underline">About</Link></li>
+              <li><Link href="/services" className="hover:underline">Services</Link></li>
+              <li><Link href="/contact" className="hover:underline">Contact</Link></li>
             </ul>
           </div>
 
@@ -26,7 +28,7 @@ export function SpaFooter() {
           </div>
         </div>
 
-        <div className="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">
+            <div className="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">
           <div className="flex items-center justify-between">
             <p>© {new Date().getFullYear()} Serenity Spa. All rights reserved.</p>
             <p>123 Tranquility Lane, Wellness City · <a href="mailto:hello@serenityspa.example" className="font-medium text-sky-700 hover:underline">hello@serenityspa.example</a></p>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useId } from 'react';
 
 interface Option { value: string; label: string }
 
@@ -13,7 +13,8 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, options, hint, error, id, className = '', ...rest }, ref) => {
-    const aid = id ?? `select-${Math.random().toString(36).slice(2,8)}`;
+    const generatedId = useId();
+    const aid = id ?? generatedId;
     const hintId = `${aid}-hint`;
     const errorId = `${aid}-error`;
     const describedBy = [] as string[];

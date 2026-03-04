@@ -1,4 +1,5 @@
 import { requireCustomer } from "@/lib/services/authService";
+import { redirect } from "next/navigation";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { logger } from "@/lib/utils/logger";
 import { listCustomerBookings } from "@/lib/application/booking.service";
@@ -18,7 +19,7 @@ type BookingRow = {
   therapists: { name: string }[] | null;
 };
 
-async function getCustomerBookings(profileId: string, userId?: string): Promise<BookingRow[]> {
+async function getCustomerBookings(profileId: string, userId: string): Promise<BookingRow[]> {
   try {
     const rows = await listCustomerBookings({
       userId: userId ?? undefined,
@@ -36,8 +37,9 @@ async function getCustomerBookings(profileId: string, userId?: string): Promise<
 export default async function DashboardPage() {
   const current = await requireCustomer();
   if (!current) return null;
+  if (!current.user?.id) redirect('/auth/login');
 
-  const bookings = await getCustomerBookings(current.profile.id, current.user?.id);
+  const bookings = await getCustomerBookings(current.profile.id, current.user.id);
 
   const now = new Date();
   const upcoming: BookingRow[] = [];

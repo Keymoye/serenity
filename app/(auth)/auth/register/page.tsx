@@ -44,12 +44,11 @@ export default function RegisterPage() {
       return;
     }
 
-    const res = await call(async () =>
-      postJson("/api/auth/register", parsed.data)
-    );
+    const res = await call(async () => postJson("/api/auth/register", parsed.data));
 
     if (res !== null) {
-      if (res.requiresEmailConfirmation) {
+      const body = res as { requiresEmailConfirmation?: boolean };
+      if (body?.requiresEmailConfirmation) {
         setSuccess(
           "Account created. Please check your email to confirm your address before logging in."
         );

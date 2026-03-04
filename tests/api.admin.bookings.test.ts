@@ -25,19 +25,19 @@ describe("API layer – admin bookings GET with filters", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    (getCurrentUser as vi.Mock<any>).mockResolvedValue(null);
+    (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     const res = await GET(makeRequest("http://localhost"));
     expect(res.status).toBe(401);
   });
 
   it("applies date filters and pagination correctly", async () => {
-    (getCurrentUser as vi.Mock<any>).mockResolvedValue({ user: { id: "u" }, profile: { role: "admin" } });
+    (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: "u" }, profile: { role: "admin" } });
     const sample = [
       { id: "1", customer_name: "A", status: "pending", created_at: "2026-03-01T00:00:00Z" },
       { id: "2", customer_name: "B", status: "pending", created_at: "2026-03-05T00:00:00Z" },
       { id: "3", customer_name: "C", status: "pending", created_at: "2026-03-10T00:00:00Z" },
     ];
-    (listAdminBookingRows as vi.Mock<any>).mockResolvedValue(sample);
+    (listAdminBookingRows as ReturnType<typeof vi.fn>).mockResolvedValue(sample);
 
     // filter startDate -> should include rows with date >= 2026-03-05
     let res = await GET(makeRequest("http://localhost?startDate=2026-03-05"));

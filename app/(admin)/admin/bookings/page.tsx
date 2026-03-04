@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import type { BookingSummary } from "@/lib/domain/booking.types";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
 import { pushToast } from "@/components/ui/Toast";
 
-type BookingRow = any;
+type BookingRow = BookingSummary & {
+  customer_email?: string | null;
+  customer_name?: string | null;
+  service_name?: string | null;
+  therapist_name?: string | null;
+  slot_start?: string | null;
+};
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -180,7 +187,7 @@ export default function AdminBookingsPage() {
                     <td className="px-3 py-2">{b.slot_start ? new Date(b.slot_start).toLocaleString() : '—'}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <Badge status={(b.status as any) ?? 'pending'} />
+                        <Badge status={(b.status as string) ?? 'pending'} />
                         <select value={b.status ?? 'pending'} onChange={(e) => handleStatusChange(b.id, e.target.value)} disabled={updatingId === b.id} className="ml-2 rounded-md border border-slate-300 px-2 py-1 text-sm">
                           <option value="confirmed">Confirmed</option>
                           <option value="pending">Pending</option>

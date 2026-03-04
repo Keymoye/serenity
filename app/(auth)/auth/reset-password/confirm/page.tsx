@@ -39,15 +39,19 @@ export default function ResetPasswordConfirmPage() {
     const refresh_token = params.get("refresh_token") ?? "";
 
     if (!access_token || !refresh_token) {
-      setTokenError(
-        "This password reset link is invalid or has expired. Please request a new one."
-      );
-      setIsSessionReady(false);
+      setTimeout(() => {
+        setTokenError(
+          "This password reset link is invalid or has expired. Please request a new one."
+        );
+        setIsSessionReady(false);
+      }, 0);
       return;
     }
 
-    setTokens({ access_token, refresh_token });
-    setIsSessionReady(true);
+    setTimeout(() => {
+      setTokens({ access_token, refresh_token });
+      setIsSessionReady(true);
+    }, 0);
   }, []);
 
   const handleChange =
