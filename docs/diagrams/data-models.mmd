@@ -1,9 +1,14 @@
+%% Last updated: March 5, 2026 | Auto-generated from source
 erDiagram
     PROFILES {
         uuid id PK
+        uuid user_id FK
         string name
         string email
         string phone
+        string role
+        timestamp created_at
+        timestamp updated_at
     }
 
     SERVICES {
@@ -12,8 +17,11 @@ erDiagram
         string category
         int duration_minutes
         float price
+        text description
+        string thumbnail_url
         boolean is_active
-        datetime updated_at
+        boolean is_featured
+        timestamp updated_at
     }
 
     THERAPISTS {
@@ -23,12 +31,15 @@ erDiagram
         string photo_url
         text bio_short
         boolean is_active
+        timestamp created_at
+        timestamp updated_at
     }
 
     THERAPIST_SERVICE {
         uuid id PK
-        uuid service_id FK
         uuid therapist_id FK
+        uuid service_id FK
+        timestamp created_at
     }
 
     SERVICE_IMAGES {
@@ -41,10 +52,11 @@ erDiagram
     TIME_SLOTS {
         uuid id PK
         uuid therapist_id FK
-        datetime start_time
-        datetime end_time
+        timestamp start_time
+        timestamp end_time
         boolean is_available
-        datetime locked_until
+        timestamp locked_until
+        timestamp created_at
     }
 
     BOOKINGS {
@@ -55,23 +67,28 @@ erDiagram
         uuid time_slot_id FK
         string status
         string reference_code
-        datetime created_at
+        text notes
+        timestamp created_at
     }
 
     MESSAGES {
         uuid id PK
-        string name
+        string full_name
         string email
+        string phone
         string subject
         text message
+        string ip_address
         boolean is_read
-        datetime created_at
+        timestamp created_at
     }
 
-    PROFILES ||--o{ BOOKINGS : "places"
-    SERVICES ||--o{ THERAPIST_SERVICE : "has"
-    THERAPISTS ||--o{ THERAPIST_SERVICE : "assigned_to"
+    PROFILES ||--o{ BOOKINGS : "places (customer_id)"
+    PROFILES ||--o{ MESSAGES : "sends (author)"
+    SERVICES ||--o{ BOOKINGS : "has (service_id)"
+    SERVICES ||--o{ THERAPIST_SERVICE : "assigned_to"
     SERVICES ||--o{ SERVICE_IMAGES : "has"
+    THERAPISTS ||--o{ BOOKINGS : "assigned_to (therapist_id)"
+    THERAPISTS ||--o{ THERAPIST_SERVICE : "assigned_to"
     THERAPISTS ||--o{ TIME_SLOTS : "offers"
-    TIME_SLOTS ||--o{ BOOKINGS : "reserved_by"
-    PROFILES ||--o{ MESSAGES : "sends"
+    TIME_SLOTS ||--|| BOOKINGS : "occupies (time_slot_id)"

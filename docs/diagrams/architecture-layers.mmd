@@ -1,0 +1,99 @@
+%% Last updated: March 5, 2026 | Auto-generated from source
+graph TD
+    subgraph UI["🎨 UI Layer (app/, components/)"]
+        Pages["Server/Client Pages<br/>(app/pages, layouts)"]
+        Components["UI Components<br/>(components/)"]
+    end
+
+    subgraph API["🌐 API Layer (app/api/)"]
+        AuthRoutes["Auth Routes<br/>(/api/auth/*)"]
+        BookingRoutes["Booking Routes<br/>(/api/booking/*)"]
+        ProfileRoutes["Profile Routes<br/>(/api/profile/*)"]
+        ServiceRoutes["Service Routes<br/>(/api/services/*, /api/therapists/*)"]
+        AdminRoutes["Admin Routes<br/>(/api/admin/*)"]
+        ContactRoutes["Contact Routes<br/>(/api/contact)"]
+    end
+
+    subgraph Services["⚙️ Services Layer (lib/application/)"]
+        AuthSvc["auth.service.ts"]
+        BookingSvc["booking.service.ts"]
+        ProfileSvc["profile.service.ts"]
+        ServiceSvc["service.service.ts"]
+        TherapistSvc["therapist.service.ts"]
+        AdminSvc["admin.service.ts"]
+        ContactSvc["contact.service.ts"]
+    end
+
+    subgraph Infra["🗄️ Infrastructure Layer (lib/infra/supabase/)"]
+        AuthRepo["auth.repo"]
+        BookingRepo["booking.repo"]
+        ProfileRepo["profile.repo"]
+        ServiceRepo["service.repo"]
+        TherapistRepo["therapist.repo"]
+        MessageRepo["message.repo"]
+        TimeSlotRepo["timeSlot.repo"]
+    end
+
+    subgraph Domain["📦 Domain Layer (lib/domain/)"]
+        Types["Interfaces & Types<br/>(*.types.ts)"]
+        Errors["Error Classes<br/>(errors.ts)"]
+        Validation["Zod Schemas<br/>(lib/utils/validation.ts)"]
+    end
+
+    subgraph External["☁️ External Services"]
+        Supabase["Supabase<br/>(PostgreSQL + Auth)"]
+        Email["Email Service"]
+    end
+
+    Pages -->|fetch| BookingRoutes
+    Pages -->|fetch| ServiceRoutes
+    Components -->|fetch| API
+    
+    AuthRoutes -->|calls| AuthSvc
+    BookingRoutes -->|calls| BookingSvc
+    ProfileRoutes -->|calls| ProfileSvc
+    ServiceRoutes -->|calls| ServiceSvc
+    ServiceRoutes -->|calls| TherapistSvc
+    AdminRoutes -->|calls| AdminSvc
+    ContactRoutes -->|calls| ContactSvc
+
+    AuthSvc -->|uses| AuthRepo
+    BookingSvc -->|uses| BookingRepo
+    BookingSvc -->|uses| TimeSlotRepo
+    BookingSvc -->|uses| ServiceRepo
+    ProfileSvc -->|uses| ProfileRepo
+    ServiceSvc -->|uses| ServiceRepo
+    ServiceSvc -->|uses| TherapistRepo
+    AdminSvc -->|uses| BookingRepo
+    AdminSvc -->|uses| ServiceRepo
+    AdminSvc -->|uses| TherapistRepo
+    AdminSvc -->|uses| TimeSlotRepo
+    AdminSvc -->|uses| MessageRepo
+    ContactSvc -->|uses| MessageRepo
+
+    AuthRepo -->|SDK call| Supabase
+    BookingRepo -->|SDK call| Supabase
+    TimeSlotRepo -->|SDK call| Supabase
+    ServiceRepo -->|SDK call| Supabase
+    TherapistRepo -->|SDK call| Supabase
+    ProfileRepo -->|SDK call| Supabase
+    MessageRepo -->|SDK call| Supabase
+
+    AuthSvc -->|imports| Errors
+    BookingSvc -->|imports| Errors
+    ContactSvc -->|imports| Errors
+    API -->|imports| Validation
+
+    classDef UILayer fill:#4A90D9,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    classDef APILayer fill:#7B68EE,stroke:#5A4CB8,stroke-width:2px,color:#fff
+    classDef ServiceLayer fill:#48BB78,stroke:#2F7C4A,stroke-width:2px,color:#fff
+    classDef InfraLayer fill:#ED8936,stroke:#B8621F,stroke-width:2px,color:#fff
+    classDef DomainLayer fill:#A0AEC0,stroke:#718096,stroke-width:2px,color:#fff
+    classDef ExternalLayer fill:#CBD5E0,stroke:#718096,stroke-width:2px,color:#000
+
+    class UI UILayer
+    class API APILayer
+    class Services ServiceLayer
+    class Infra InfraLayer
+    class Domain DomainLayer
+    class External ExternalLayer

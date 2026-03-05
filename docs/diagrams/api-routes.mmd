@@ -1,0 +1,77 @@
+%% Last updated: March 5, 2026 | Auto-generated from source
+graph LR
+    subgraph Auth["Authentication"]
+        AuthLogin["POST /api/auth/login<br/>(public)"]
+        AuthRegister["POST /api/auth/register<br/>(public)"]
+        AuthLogout["POST /api/auth/logout<br/>(protected)"]
+        AuthReset["POST /api/auth/reset-password<br/>(public)"]
+        AuthResetConfirm["POST /api/auth/reset-password/confirm<br/>(public)"]
+    end
+
+    subgraph Booking["Booking"]
+        BookingList["GET /api/booking/list<br/>(protected)"]
+        BookingAvail["POST /api/booking/availability<br/>(protected)"]
+        BookingLock["POST /api/booking/lock<br/>(protected)"]
+        BookingConfirm["POST /api/booking/confirm<br/>(protected)"]
+    end
+
+    subgraph Profile["User Profile"]
+        ProfileGet["GET /api/profile<br/>(protected)"]
+        ProfileUpdate["PATCH /api/profile<br/>(protected)"]
+        ProfilePassword["POST /api/profile/password<br/>(protected)"]
+    end
+
+    subgraph Services["Services & Therapists"]
+        ServicesList["GET /api/services<br/>(public)"]
+        ServiceDetail["GET /api/services/[id]<br/>(public)"]
+        ServiceTherapists["GET /api/services/[id]/therapists<br/>(public)"]
+        TherapistDetail["GET /api/therapists/[id]<br/>(public)"]
+        TherapistsList["GET /api/therapists<br/>(public)"]
+    end
+
+    subgraph Contact["Contact & Messages"]
+        ContactSubmit["POST /api/contact<br/>(public, rate-limited)"]
+    end
+
+    subgraph AdminServices["Admin: Services"]
+        AdminServicesList["GET /api/admin/services<br/>(admin-only)"]
+        AdminServiceCreate["POST /api/admin/services<br/>(admin-only)"]
+        AdminServiceUpdate["PUT /api/admin/services/[id]<br/>(admin-only)"]
+        AdminServiceDelete["DELETE /api/admin/services/[id]<br/>(admin-only)"]
+    end
+
+    subgraph AdminTherapists["Admin: Therapists"]
+        AdminTherapistsList["GET /api/admin/therapists<br/>(admin-only)"]
+        AdminTherapistCreate["POST /api/admin/therapists<br/>(admin-only)"]
+        AdminTherapistUpdate["PUT /api/admin/therapists/[id]<br/>(admin-only)"]
+        AdminTherapistDelete["DELETE /api/admin/therapists/[id]<br/>(admin-only)"]
+    end
+
+    subgraph AdminBookings["Admin: Bookings"]
+        AdminBookingsList["GET /api/admin/bookings<br/>(admin-only)"]
+        AdminBookingsRows["GET /api/admin/bookings/rows<br/>(admin-only)"]
+        AdminBookingStatus["PUT /api/admin/bookings/[id]/status<br/>(admin-only)"]
+        AdminBookingDelete["DELETE /api/admin/bookings/[id]<br/>(admin-only)"]
+    end
+
+    subgraph AdminSlots["Admin: Time Slots"]
+        AdminSlotsList["GET /api/admin/time-slots<br/>(admin-only)"]
+        AdminSlotCreate["POST /api/admin/time-slots<br/>(admin-only)"]
+        AdminSlotDelete["DELETE /api/admin/time-slots/[id]<br/>(admin-only)"]
+    end
+
+    subgraph AdminMessages["Admin: Messages & Metrics"]
+        AdminMessagesList["GET /api/admin/messages<br/>(admin-only)"]
+        AdminMessageToggle["PUT /api/admin/messages/[id]<br/>(admin-only)"]
+        AdminMetrics["GET /api/admin/metrics<br/>(admin-only)"]
+    end
+
+    classDef publicRoute fill:#4A90D9,stroke:#2E5C8A,stroke-width:1px,color:#fff
+    classDef protectedRoute fill:#48BB78,stroke:#2F7C4A,stroke-width:1px,color:#fff
+    classDef adminRoute fill:#ED8936,stroke:#B8621F,stroke-width:1px,color:#fff
+    classDef rateLimited fill:#F687B3,stroke:#C03570,stroke-width:1px,color:#fff
+
+    class AuthLogin,AuthRegister,AuthReset,AuthResetConfirm,ServicesList,ServiceDetail,ServiceTherapists,TherapistDetail,TherapistsList publicRoute
+    class AuthLogout,BookingList,BookingAvail,BookingLock,BookingConfirm,ProfileGet,ProfileUpdate,ProfilePassword protectedRoute
+    class AdminServicesList,AdminServiceCreate,AdminServiceUpdate,AdminServiceDelete,AdminTherapistsList,AdminTherapistCreate,AdminTherapistUpdate,AdminTherapistDelete,AdminBookingsList,AdminBookingsRows,AdminBookingStatus,AdminBookingDelete,AdminSlotsList,AdminSlotCreate,AdminSlotDelete,AdminMessagesList,AdminMessageToggle,AdminMetrics adminRoute
+    class ContactSubmit rateLimited
