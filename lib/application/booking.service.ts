@@ -6,6 +6,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../domain/errors";
+import { logger } from "@/lib/utils/logger";
 import {
   sendBookingConfirmation,
   sendAdminNewBookingNotification,
@@ -27,6 +28,8 @@ import { createTherapistRepository } from "../infra/supabase/therapist.repo";
 export interface BookingContext {
   userId: string;
   customerProfileId: string;
+  // optional correlation ID for logging/debugging
+  correlationId?: string;
 }
 
 export interface BookingDependencies {
@@ -284,7 +287,7 @@ export async function listCustomerBookings(
 
 export async function cancelBooking(
   { bookingId }: { bookingId: string },
-  context: BookingContext & { correlationId?: string },
+  context: BookingContext,
   deps: BookingDependencies = createDefaultDeps(),
 ): Promise<Booking> {
   if (!bookingId || typeof bookingId !== "string") {

@@ -7,7 +7,7 @@ import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const correlationId = randomUUID();
   const log = logger.withContext({ correlationId, route: "booking.[id].DELETE" });
@@ -21,7 +21,7 @@ export async function DELETE(
       );
     }
 
-    const bookingId = params.id;
+    const { id: bookingId } = await params;
     if (!bookingId || typeof bookingId !== "string") {
       return NextResponse.json(
         { error: "Missing booking ID.", code: "VALIDATION_ERROR" },
