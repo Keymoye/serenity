@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 export default function AdminBreadcrumb() {

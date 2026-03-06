@@ -4,10 +4,10 @@ import Image from "next/image";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { PageHero } from "@/components/layout/PageHero";
 
-type TherapistPageProps = { params: { id: string } };
+type TherapistPageProps = { params: Promise<{ id: string }> };
 
 export default async function TherapistPage({ params }: TherapistPageProps) {
-  const { id } = params;
+  const { id } = await await params;
   let detail;
 
   try {

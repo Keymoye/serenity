@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 interface CalendarPickerProps {
   selectedDate: string;
@@ -9,9 +9,23 @@ interface CalendarPickerProps {
 
 // simple month calendar; doesn't handle localization or week start days
 export function CalendarPicker({ selectedDate, onSelectDate }: CalendarPickerProps) {
-  const displayMonth = useMemo(() => (selectedDate ? new Date(selectedDate) : new Date()), [selectedDate]);
+  const [currentDate, setCurrentDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      setCurrentDate(new Date().toISOString().slice(0,10));
+    }
+  }, []);
+
+  const effectiveDate = selectedDate || currentDate;
+  const displayMonth = useMemo(() => (effectiveDate ? new Date(effectiveDate) : new Date()), [effectiveDate]);
 
   const year = displayMonth.getFullYear();
+  
+  if (!effectiveDate) {
+    // while we wait for client-side effect, render empty placeholder
+    return <div className="w-full max-w-sm sm:max-w-xs">Loading calendar…</div>;
+  }
   const month = displayMonth.getMonth(); // 0-indexed
 
   const firstDay = new Date(year, month, 1);

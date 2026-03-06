@@ -229,6 +229,18 @@ All 9 planned features complete:
    - Admin urgent alert within 24 hours
 Next: UI redesign — design system, landing page, 
 auth pages, booking wizard, admin schedule calendar
+
+## Hydration & Boundary Audit Fix
+## Date: March 6, 2026
+- Audited: all files in app/ and components/
+- Issues found: 5
+- Issues fixed: 5
+- 🔴 Fixed: therapists/[id]/page.tsx — Next.js 15 async params
+- 🟡 Fixed: CalendarPicker.tsx — new Date() hydration mismatch
+- 🟡 Fixed: ScheduleViewer.tsx — date formatting hydration mismatch  
+- 🟢 Fixed: StepIndicator.tsx — removed unnecessary "use client"
+- 🟢 Fixed: AdminBreadcrumb.tsx — removed unused useSearchParams import
+- Build status: pass after fixes
 - This caused booking drop-off and required users to restart the booking flow from scratch
 
 ### Solution Implemented
