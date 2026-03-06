@@ -10,6 +10,7 @@ export interface TimeSlotRepository {
   lockSlot(timeSlotId: string, lockUntilIso: string, nowIso: string): Promise<boolean>;
   tryMarkAsBooked(timeSlotId: string): Promise<boolean>;
   setAvailable(timeSlotId: string): Promise<void>;
+  reopenTimeSlot(timeSlotId: string): Promise<boolean>;
 }
 
 export function createTimeSlotRepository(): TimeSlotRepository {
@@ -96,6 +97,19 @@ export function createTimeSlotRepository(): TimeSlotRepository {
         .update({ is_available: true })
         .eq("id", timeSlotId);
       if (error) throw error;
+    },
+
+    async reopenTimeSlot(timeSlotId) {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("time_slots")
+        .update({ is_available: true, locked_until: null })
+        .eq("id", timeSlotId)
+        .eq("is_available", false)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data);
     },
   };
 }

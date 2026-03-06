@@ -25,6 +25,7 @@ export interface BookingRepository {
       therapists: { name: string }[] | null;
     }>
   >;
+  findBookingById(bookingId: string): Promise<Booking | null>;
   findBookingIdByTimeSlotId(timeSlotId: string): Promise<string | null>;
   createBooking(payload: Omit<Booking, "id" | "created_at">): Promise<Booking>;
   updateBooking(
@@ -32,6 +33,7 @@ export interface BookingRepository {
     payload: Partial<Omit<Booking, "id" | "created_at">>,
   ): Promise<Booking>;
   deleteBooking(id: string): Promise<void>;
+  cancelCustomerBooking(bookingId: string, customerId: string): Promise<Booking | null>;
 }
 
 export function createBookingRepository(): BookingRepository {
@@ -119,6 +121,17 @@ export function createBookingRepository(): BookingRepository {
       return (data?.id as string | undefined) ?? null;
     },
 
+    async findBookingById(bookingId: string) {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as Booking | null) ?? null;
+    },
+
     async createBooking(
       payload: Omit<Booking, "id" | "created_at">,
     ): Promise<Booking> {
@@ -151,6 +164,19 @@ export function createBookingRepository(): BookingRepository {
       const supabase = await getSupabaseAdminClient();
       const { error } = await supabase.from("bookings").delete().eq("id", id);
       if (error) throw error;
+    },
+
+    async cancelCustomerBooking(bookingId: string, customerId: string): Promise<Booking | null> {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .eq("id", bookingId)
+        .eq("customer_id", customerId)
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return (data as Booking | null) ?? null;
     },
   };
 }

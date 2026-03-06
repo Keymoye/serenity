@@ -3,14 +3,26 @@ import type { TimeSlot } from "../domain/timeSlot.types";
 import {
   ConflictError,
   InternalError,
+  NotFoundError,
   ValidationError,
 } from "../domain/errors";
+import {
+  sendBookingConfirmation,
+  sendAdminNewBookingNotification,
+  sendCancellationConfirmation,
+  sendAdminLateCancellationAlert,
+} from "@/lib/utils/emailService";
+import { formatAppointmentDate, formatAppointmentTime } from "@/lib/utils/dateUtils";
 import type { TimeSlotRepository } from "../infra/supabase/timeSlot.repo";
 import type { BookingRepository } from "../infra/supabase/booking.repo";
+import type { ServiceRepository } from "../infra/supabase/service.repo";
+import type { ProfileRepository } from "../infra/supabase/profile.repo";
+import type { TherapistRepository } from "../infra/supabase/therapist.repo";
 import { createTimeSlotRepository } from "../infra/supabase/timeSlot.repo";
 import { createBookingRepository } from "../infra/supabase/booking.repo";
 import { createServiceRepository } from "../infra/supabase/service.repo";
-import type { ServiceRepository } from "../infra/supabase/service.repo";
+import { createProfileRepository } from "../infra/supabase/profile.repo";
+import { createTherapistRepository } from "../infra/supabase/therapist.repo";
 
 export interface BookingContext {
   userId: string;
@@ -21,6 +33,8 @@ export interface BookingDependencies {
   timeSlotRepo: TimeSlotRepository;
   bookingRepo: BookingRepository;
   serviceRepo: ServiceRepository;
+  profileRepo: ProfileRepository;
+  therapistRepo: TherapistRepository;
 }
 
 function createDefaultDeps(): BookingDependencies {
@@ -28,6 +42,8 @@ function createDefaultDeps(): BookingDependencies {
     timeSlotRepo: createTimeSlotRepository(),
     bookingRepo: createBookingRepository(),
     serviceRepo: createServiceRepository(),
+    profileRepo: createProfileRepository(),
+    therapistRepo: createTherapistRepository(),
   };
 }
 
@@ -134,6 +150,37 @@ export async function confirmBooking(
 
   const referenceCode = generateReferenceCode();
 
+  // Pre-fetch display data for emails (non-fatal, provide fallbacks)
+  let serviceName = "your service";
+  try {
+    const svc = await deps.serviceRepo.getPublicServiceDetail(payload.serviceId);
+    if (svc && svc.service) serviceName = svc.service.name;
+  } catch (_) {}
+
+  let therapistName: string | null = null;
+  try {
+    if (payload.therapistId) {
+      const th = await deps.therapistRepo.findById(payload.therapistId);
+      if (th) therapistName = th.name;
+    }
+  } catch (_) {}
+
+  let slotStartTime = "";
+  try {
+    const slot = await deps.timeSlotRepo.findById(payload.timeSlotId);
+    if (slot) slotStartTime = slot.start_time;
+  } catch (_) {}
+
+  let customerEmail = "";
+  let customerName = "Valued Customer";
+  try {
+    const profile = await deps.profileRepo.findById(context.userId);
+    if (profile) {
+      customerName = profile.name ?? "Valued Customer";
+      // email not stored on profile; leave empty string
+    }
+  } catch (_) {}
+
   // Atomic gate: only one confirmation can flip availability from true->false.
   let marked = false;
   try {
@@ -177,6 +224,44 @@ export async function confirmBooking(
     });
   }
 
+  // send emails (best-effort)
+  const emailResult = await sendBookingConfirmation({
+    to: customerEmail,
+    customerName,
+    referenceCode: booking.reference_code,
+    serviceName,
+    therapistName,
+    appointmentDate: formatAppointmentDate(slotStartTime),
+    appointmentTime: formatAppointmentTime(slotStartTime),
+    notes: payload.notes ?? null,
+    cancellationUrl: `${process.env.SPA_WEBSITE ?? ""}/dashboard`,
+  });
+  if (!emailResult.success) {
+    logger.warn("Booking confirmation email failed", {
+      bookingId: booking.id,
+      error: emailResult.error,
+      correlationId: context.correlationId,
+    });
+  }
+
+  const adminResult = await sendAdminNewBookingNotification({
+    referenceCode: booking.reference_code,
+    customerName,
+    customerEmail,
+    serviceName,
+    therapistName,
+    appointmentDate: formatAppointmentDate(slotStartTime),
+    appointmentTime: formatAppointmentTime(slotStartTime),
+    notes: payload.notes ?? null,
+  });
+  if (!adminResult.success) {
+    logger.warn("Admin booking notification failed", {
+      bookingId: booking.id,
+      error: adminResult.error,
+      correlationId: context.correlationId,
+    });
+  }
+
   return {
     booking,
     referenceCode,
@@ -195,5 +280,134 @@ export async function listCustomerBookings(
   } catch (error) {
     throw new InternalError("BOOKINGS_FAILED", "Failed to load customer bookings", { error });
   }
+}
+
+export async function cancelBooking(
+  { bookingId }: { bookingId: string },
+  context: BookingContext & { correlationId?: string },
+  deps: BookingDependencies = createDefaultDeps(),
+): Promise<Booking> {
+  if (!bookingId || typeof bookingId !== "string") {
+    throw new ValidationError("Booking ID is required.");
+  }
+
+  let booking: Booking | null;
+  try {
+    booking = await deps.bookingRepo.findBookingById(bookingId);
+  } catch (error) {
+    throw new InternalError("FETCH_FAILED", "Unable to fetch booking.", {
+      bookingId,
+      error,
+    });
+  }
+
+  if (!booking) {
+    throw new NotFoundError("Booking not found.");
+  }
+
+  if (booking.customer_id !== context.customerProfileId) {
+    throw new NotFoundError("Booking not found.");
+  }
+
+  if (booking.status === "cancelled") {
+    throw new ConflictError("ALREADY_CANCELLED", "Booking is already cancelled.");
+  }
+
+  let cancelled: Booking | null;
+  try {
+    cancelled = await deps.bookingRepo.cancelCustomerBooking(bookingId, context.customerProfileId);
+  } catch (error) {
+    throw new InternalError("CANCEL_FAILED", "Unable to cancel booking.", {
+      bookingId,
+      error,
+    });
+  }
+
+  if (!cancelled) {
+    throw new NotFoundError("Booking not found.");
+  }
+
+  if (booking.time_slot_id) {
+    try {
+      await deps.timeSlotRepo.reopenTimeSlot(booking.time_slot_id);
+    } catch (_error) {
+    }
+  }
+
+  // pre-fetch data for emails (best-effort, non-fatal)
+  let serviceName = "your service";
+  try {
+    const svc = await deps.serviceRepo.getPublicServiceDetail(booking.service_id);
+    if (svc && svc.service) serviceName = svc.service.name;
+  } catch (_) {}
+
+  let therapistName: string | null = null;
+  try {
+    if (booking.therapist_id) {
+      const th = await deps.therapistRepo.findById(booking.therapist_id);
+      if (th) therapistName = th.name;
+    }
+  } catch (_) {}
+
+  let slotStartTime = "";
+  try {
+    const slot = await deps.timeSlotRepo.findById(booking.time_slot_id);
+    if (slot) slotStartTime = slot.start_time;
+  } catch (_) {}
+
+  let customerEmail = "";
+  let customerName = "Valued Customer";
+  try {
+    const profile = await deps.profileRepo.findById(context.userId);
+    if (profile) {
+      customerName = profile.name ?? "Valued Customer";
+      // email not stored on profile; leave blank
+    }
+  } catch (_) {}
+
+  // always send cancellation confirmation
+  const cancelEmailResult = await sendCancellationConfirmation({
+    to: customerEmail,
+    customerName,
+    referenceCode: cancelled.reference_code,
+    serviceName,
+    therapistName,
+    appointmentDate: formatAppointmentDate(slotStartTime),
+    appointmentTime: formatAppointmentTime(slotStartTime),
+  });
+  if (!cancelEmailResult.success) {
+    logger.warn("Cancellation confirmation email failed", {
+      bookingId: cancelled.id,
+      error: cancelEmailResult.error,
+      correlationId: context.correlationId,
+    });
+  }
+
+  // potentially send late-cancellation admin alert
+  if (slotStartTime) {
+    const hoursUntil =
+      (new Date(slotStartTime).getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (hoursUntil >= 0 && hoursUntil < 24) {
+      const alertResult = await sendAdminLateCancellationAlert({
+        referenceCode: cancelled.reference_code,
+        customerName,
+        serviceName,
+        therapistName,
+        appointmentDate: formatAppointmentDate(slotStartTime),
+        appointmentTime: formatAppointmentTime(slotStartTime),
+        hoursUntilAppointment: Math.round(hoursUntil),
+      });
+      if (!alertResult.success) {
+        logger.warn("Admin late cancellation alert failed", {
+          bookingId: cancelled.id,
+          error: alertResult.error,
+          correlationId: context.correlationId,
+        });
+      }
+    }
+  }
+
+  return cancelled;
 }
 

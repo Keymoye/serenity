@@ -97,7 +97,19 @@ export async function listCustomerBookings(context: BookingContext, deps?: Booki
 - `ValidationError` if missing context.customerProfileId
 - Returns rows or throws `InternalError("BOOKINGS_FAILED")`
 
-Dependencies include repositories for time slots, bookings, and services.
+```ts
+export async function cancelBooking({ bookingId }: { bookingId: string }, context: BookingContext & { correlationId?: string }, deps?: BookingDependencies): Promise<Booking>
+```
+- `ValidationError` if bookingId missing or not a string
+- Fetches booking by ID; throws `NotFoundError("Booking not found")` if not found
+- **Authorization**: throws `NotFoundError` if booking.customer_id does not match context.customerProfileId (defense in depth — same error as not found to prevent user enumeration)
+- **Conflict**: throws `ConflictError("ALREADY_CANCELLED")` if booking.status is already "cancelled"
+- Updates booking status to "cancelled" via `bookingRepo.cancelCustomerBooking()` with customer_id guard
+- Attempts to reopen the time slot via `timeSlotRepo.reopenTimeSlot()`; silently swallows errors if reopening fails (cancellation is the critical operation; slot reopening is best-effort)
+- Returns the cancelled Booking record
+- Throws `InternalError` on fetch, cancel, or query failures
+
+Dependencies include repositories for bookings and time slots.
 
 ---
 
@@ -172,6 +184,94 @@ This file contains all admin‑only logic. Each function begins by asserting the
 
 Validation errors thrown for missing required fields (e.g. service name), and repository errors propagate as thrown by repo.
 
+
+---
+
+## Email Infrastructure (lib/utils/emailService.ts)
+
+**Note:** This is a shared utility infrastructure layer, not an application service. It lives in `lib/utils/` and is called by application services (and later, by admin features). Resend is the single email provider integration point — all services call this module, never Resend directly.
+
+### Interfaces
+
+```ts
+export interface EmailResult {
+  success: boolean;
+  error?: string;
+}
+```
+
+All send functions return `EmailResult`. They **never throw** — email failures must not crash booking confirmations.
+
+### Functions
+
+```ts
+export async function sendBookingConfirmation(data: {
+  to: string;
+  customerName: string;
+  referenceCode: string;
+  serviceName: string;
+  therapistName: string | null;
+  appointmentDate: string;
+  appointmentTime: string;
+  notes: string | null;
+  cancellationUrl: string;
+}): Promise<EmailResult>
+```
+- Sends booking confirmation to customer
+- Uses `bookingConfirmationTemplate` from `lib/utils/emailTemplates.ts`
+- Logs success or failure via logger; returns `{ success: true }` or `{ success: false, error: message }`
+
+```ts
+export async function sendAdminNewBookingNotification(data: {
+  referenceCode: string;
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  therapistName: string | null;
+  appointmentDate: string;
+  appointmentTime: string;
+  notes: string | null;
+}): Promise<EmailResult>
+```
+- Sends admin notification for new booking to `RESEND_ADMIN_EMAIL`
+- Uses `adminNewBookingTemplate`
+- Never throws; returns `EmailResult`
+
+```ts
+export async function sendAdminLateCancellationAlert(data: {
+  referenceCode: string;
+  customerName: string;
+  serviceName: string;
+  therapistName: string | null;
+  appointmentDate: string;
+  appointmentTime: string;
+  hoursUntilAppointment: number;
+}): Promise<EmailResult>
+```
+- Sends urgent alert to admin when booking cancelled < 24 hours before appointment
+- Uses `adminLateCancellationTemplate` (amber/warning style)
+- Returns `EmailResult`
+
+```ts
+export async function sendCancellationConfirmation(data: {
+  to: string;
+  customerName: string;
+  referenceCode: string;
+  serviceName: string;
+  therapistName: string | null;
+  appointmentDate: string;
+  appointmentTime: string;
+}): Promise<EmailResult>
+```
+- Sends cancellation confirmation to customer
+- Uses `cancellationConfirmationTemplate`
+- Returns `EmailResult`
+
+### Related Files
+
+- **lib/utils/emailTemplates.ts**: Pure HTML generation functions (no Resend imports)
+- **lib/utils/dateUtils.ts**: `formatAppointmentDate()` and `formatAppointmentTime()` helpers
+- **.env.example**: Includes `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_ADMIN_EMAIL`, and spa config vars
 
 ---
 

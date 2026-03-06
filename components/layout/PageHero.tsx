@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 interface PageHeroProps {
@@ -9,6 +12,28 @@ interface PageHeroProps {
 }
 
 export function PageHero({ title, subtitle, ctaLabel, ctaHref, imageSrc }: PageHeroProps) {
+  const router = useRouter();
+
+  const handleBookingCta = () => {
+    if (!ctaHref?.startsWith('/book')) {
+      // Not a booking CTA, shouldn't reach here
+      return;
+    }
+
+    // Extract serviceId from URL if present
+    const url = new URL(ctaHref, 'http://placeholder');
+    const serviceId = url.searchParams.get('serviceId');
+
+    if (serviceId) {
+      try {
+        sessionStorage.setItem('pendingServiceId', serviceId);
+      } catch (_) {
+        // sessionStorage unavailable; proceed anyway
+      }
+    }
+
+    router.push('/auth/login');
+  };
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-50 to-stone-50">
       <div className="mx-auto max-w-6xl px-4 py-16">
@@ -17,7 +42,11 @@ export function PageHero({ title, subtitle, ctaLabel, ctaHref, imageSrc }: PageH
             <h1 className="font-display text-3xl font-semibold text-spa-charcoal md:text-4xl">{title}</h1>
             {subtitle && <p className="text-sm text-stone-700">{subtitle}</p>}
             {ctaLabel && ctaHref && (
-              <a href={ctaHref} className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">{ctaLabel}</a>
+              ctaHref.startsWith('/book') ? (
+                <button onClick={handleBookingCta} className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">{ctaLabel}</button>
+              ) : (
+                <a href={ctaHref} className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">{ctaLabel}</a>
+              )
             )}
           </div>
           <div className="hidden items-center justify-center md:flex">

@@ -44,7 +44,31 @@ function LoginContent() {
       // read 'next' query param client-side without hooks
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
-      router.push(next || "/dashboard");
+      
+      let redirectPath = "/dashboard";
+
+      // Primary: check if next param already contains serviceId
+      if (next) {
+        const decoded = decodeURIComponent(next);
+        if (decoded.includes("serviceId=")) {
+          redirectPath = decoded;
+        }
+      }
+
+      // Fallback: check sessionStorage for pending serviceId
+      if (redirectPath === "/dashboard") {
+        try {
+          const pendingId = sessionStorage.getItem("pendingServiceId");
+          if (pendingId) {
+            sessionStorage.removeItem("pendingServiceId");
+            redirectPath = `/book?serviceId=${pendingId}`;
+          }
+        } catch (_) {
+          // sessionStorage unavailable; use fallback
+        }
+      }
+
+      router.push(redirectPath);
     }
   };
 

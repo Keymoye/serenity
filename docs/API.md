@@ -120,6 +120,17 @@ This document lists every server route implemented under `app/api/` along with i
   - `ConflictError` (`SLOT_ALREADY_BOOKED`)
   - Other internal errors
 
+## /api/booking/[id] (DELETE)
+- **Method**: DELETE
+- **Auth required**: yes (must provide route param `id` as booking UUID)
+- **Parameters**: route param `id` (booking ID)
+- **Success**: `200 { success: true; data: Booking }`
+- **Errors**:
+  - `401 UNAUTHENTICATED` when not authenticated
+  - `400 VALIDATION_ERROR` when booking ID is missing or invalid
+  - `404 NOT_FOUND` when booking not found or doesn't belong to authenticated customer
+  - `409 CONFLICT` when booking is already cancelled
+
 ## /api/contact (POST)
 - **Method**: POST
 - **Auth required**: no

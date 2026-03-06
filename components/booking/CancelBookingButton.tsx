@@ -6,19 +6,33 @@ import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { pushToast } from "@/components/ui/Toast";
 
-interface Props { id: string }
+interface Props {
+  id: string;
+  onSuccess?: () => void;
+}
 
-export default function CancelBookingButton({ id }: Props) {
+export default function CancelBookingButton({ id, onSuccess }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
+    // Confirm with user before proceeding
+    const confirmed = window.confirm(
+      "Cancel your booking? Your time slot will be released immediately for other customers.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/booking/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (res.ok) {
         pushToast("success", "Booking cancelled");
+        if (onSuccess) {
+          onSuccess();
+        }
         router.refresh();
       } else {
         let msg = "Unable to cancel booking.";
