@@ -29,8 +29,9 @@ async function getCustomerBookings(profileId: string, userId: string): Promise<B
   } catch (error) {
     logger.error("Unexpected error while loading customer bookings", error, {
       profileId,
+      userId,
     });
-    return [];
+    throw error;
   }
 }
 
@@ -39,7 +40,25 @@ export default async function DashboardPage() {
   if (!current) return null;
   if (!current.user?.id) redirect('/auth/login');
 
-  const bookings = await getCustomerBookings(current.profile.id, current.user.id);
+  let bookings: BookingRow[] = [];
+  try {
+    bookings = await getCustomerBookings(current.profile.id, current.user.id);
+  } catch (error) {
+    logger.error("Dashboard failed to load bookings", error, {
+      profileId: current.profile.id,
+      userId: current.user.id,
+    });
+    return (
+      <SectionWrapper>
+        <div className="space-y-6">
+          <PageHero title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} subtitle="We're having trouble loading your bookings. Please try refreshing." />
+          <div className="rounded-2xl bg-red-50 p-6 border border-red-200">
+            <p className="text-sm text-red-700">We encountered an error loading your bookings. Please try again later.</p>
+          </div>
+        </div>
+      </SectionWrapper>
+    );
+  }
 
   const now = new Date();
   const upcoming: BookingRow[] = [];

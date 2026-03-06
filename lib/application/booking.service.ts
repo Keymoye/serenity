@@ -55,11 +55,15 @@ export async function getAvailability(
     serviceId,
     therapistId,
     date,
-  }: { serviceId: string; therapistId: string; date: string },
+  }: { serviceId: string; therapistId?: string; date: string },
   deps: BookingDependencies = createDefaultDeps(),
 ): Promise<Pick<TimeSlot, "id" | "start_time" | "end_time">[]> {
-  if (!serviceId || !therapistId || !date) {
+  if (!serviceId || !date) {
     throw new ValidationError("Missing parameters.", { serviceId, therapistId, date });
+  }
+  
+  if (!therapistId) {
+    throw new ValidationError("Therapist is required.", { therapistId }, "THERAPIST_REQUIRED");
   }
   let assigned: boolean;
   try {

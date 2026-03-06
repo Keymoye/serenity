@@ -27,11 +27,18 @@ export async function POST(request: Request) {
     const json = (await request.json()) as AvailabilityRequestBody;
     const { serviceId, therapistId, date } = json;
 
+    if (!serviceId || !date) {
+      return NextResponse.json(
+        { error: "Missing required parameters", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
     const slots = await getAvailability(
       {
-        serviceId: serviceId ?? "",
-        therapistId: therapistId ?? "",
-        date: date ?? "",
+        serviceId: serviceId,
+        therapistId: therapistId,
+        date: date,
       },
     );
 
