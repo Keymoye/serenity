@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
+import { getCurrentUser } from "@/lib/services/authService";
 
 export default async function AdminLayout({
   children,

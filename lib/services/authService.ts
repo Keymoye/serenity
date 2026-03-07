@@ -1,8 +1,16 @@
-import { getCurrentUser } from '@/lib/infra/supabase/currentUser';
+import { getCurrentUser as getServerCurrentUser, type CurrentUser } from '@/lib/infra/supabase/currentUser';
+
+/**
+ * Application-layer wrapper for auth functions.
+ * UI server components import from here — never from infra directly.
+ */
+export { type CurrentUser };
+
+export const getCurrentUser = getServerCurrentUser;
 
 export async function requireCurrentUser() {
   try {
-    const current = await getCurrentUser();
+    const current = await getServerCurrentUser();
     return current ?? null;
   } catch (err) {
     return null;

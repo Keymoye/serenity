@@ -29,23 +29,21 @@ describe("infrastructure repositories - query composition", () => {
     vi.clearAllMocks();
   });
 
-  it("timeSlotRepo.lockSlot constructs atomic update", async () => {
-    const fake = makeChain({ data: [{ id: "1" }], error: null });
-    (getSupabaseAdminClient as any).mockResolvedValue(fake);
-    const repo = createTimeSlotRepository();
+  it("timeSlotRepo.lockSlot calls try_lock_slot rpc", async () => {
+  const fake = makeChain({ data: null, error: null });
+  fake.rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+  (getSupabaseAdminClient as any).mockResolvedValue(fake);
+  const repo = createTimeSlotRepository();
 
-    const res = await repo.lockSlot("ts1", "lockUntil", "nowIso");
-    expect(res).toBe(true);
+  const res = await repo.lockSlot("ts1", "lockUntil", "nowIso");
+  expect(res).toBe(true);
 
-    // verify query conditions
-    expect(fake.from).toHaveBeenCalledWith("time_slots");
-    expect(fake.update).toHaveBeenCalledWith({ locked_until: "lockUntil" });
-    expect(fake.eq).toHaveBeenCalledWith("id", "ts1");
-    // ensure is_available check was added
-    expect(fake.eq).toHaveBeenCalledWith("is_available", true);
-    // "or" called with expiration condition
-    expect(fake.or).toHaveBeenCalled();
+  expect(fake.rpc).toHaveBeenCalledWith("try_lock_slot", {
+    slot: "ts1",
+    lock_until: "lockUntil",
+    now_ts: "nowIso",
   });
+});
 
   it("timeSlotRepo.tryMarkAsBooked updates only available slot", async () => {
     const fake = makeChain({ data: [{ id: "1" }], error: null });

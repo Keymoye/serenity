@@ -1,5 +1,44 @@
 # Documentation Audit Log
 
+## P0 Fix: Architecture Violation — UI Infra Imports
+
+**Date**: March 7, 2026  
+**Severity**: Critical — Violates 4-layer architecture  
+**Status**: ✅ RESOLVED
+
+### Problem
+UI server components were importing directly from `lib/infra/supabase/` layer, bypassing the application layer. This violated the strict dependency rule: **downward only** (UI → API → Services → Infra/Domain).
+
+**Files affected**:
+1. `app/(admin)/admin/layout.tsx` — imported `getCurrentUser` from infra
+2. `components/layout/SpaNavbar.tsx` — imported type `CurrentUser` from infra
+
+### Solution
+Created application-layer re-exports in `lib/services/authService.ts`:
+- Added `export { type CurrentUser }` — re-exports type from infra
+- Added `export const getCurrentUser = getServerCurrentUser` — re-exports function from infra
+- Everything in UI now imports from `lib/services/authService` (application layer)
+
+### Changes Made
+| File | Change |
+|------|--------|
+| `lib/services/authService.ts` | ✅ Added `CurrentUser` type export + `getCurrentUser` function export |
+| `app/(admin)/admin/layout.tsx` | ✅ Changed import to `lib/services/authService` |
+| `components/layout/SpaNavbar.tsx` | ✅ Changed type import to `lib/services/authService` |
+
+### Build Verification
+- ✅ `pnpm run build` — Exit code 0
+- ✅ TypeScript compilation successful (14.7s)
+- ✅ All 38 routes registered
+- ✅ Zero import errors
+- ✅ No infra imports in UI layer (verified via grep)
+
+### Architecture Compliance
+**Before**: ❌ UI → Infra (violation)  
+**After**: ✅ UI → Services → Infra (correct)
+
+---
+
 ## Audit: March 5, 2026
 
 **Performed by**: GitHub Copilot (agent mode)  

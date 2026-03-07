@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { CurrentUser } from '@/lib/infra/supabase/currentUser';
+import type { CurrentUser } from '@/lib/services/authService';
 
 interface SpaNavbarProps {
   current?: CurrentUser | null;

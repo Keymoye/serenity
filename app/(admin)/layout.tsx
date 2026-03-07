@@ -13,7 +13,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div className="min-h-screen bg-stone-50">
       <AdminSidebar current={current} />
-
       <div className="ml-0 md:ml-64">
         <header className="border-b border-slate-200 bg-white/50 px-4 py-3">
           <div className="mx-auto max-w-6xl">
