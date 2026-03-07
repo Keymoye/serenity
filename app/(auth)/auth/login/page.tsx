@@ -18,8 +18,12 @@ const INITIAL_VALUES: LoginInput = {
 
 function LoginContent() {
   const router = useRouter();
-
   const { loading, error, call, setError } = useApi();
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"magic-link" | "password">("magic-link");
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [values, setValues] = useState<LoginInput>(INITIAL_VALUES);
 
   const handleChange = (field: keyof LoginInput) =>
@@ -27,7 +31,26 @@ function LoginContent() {
       setValues((v) => ({ ...v, [field]: event.target.value }));
     };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleMagicLinkSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!magicLinkEmail.trim()) {
+      setError("Email is required.");
+      return;
+    }
+
+    const success = await call(async () =>
+      postJson("/api/auth/magic-link", { email: magicLinkEmail })
+    );
+
+    if (success !== null) {
+      setMagicLinkSent(true);
+      setMagicLinkEmail("");
+    }
+  };
+
+  const handlePasswordSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
 
@@ -42,13 +65,11 @@ function LoginContent() {
     );
 
     if (success !== null) {
-      // read 'next' query param client-side without hooks
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       
       let redirectPath = "/dashboard";
 
-      // Primary: check if next param already contains serviceId
       if (next) {
         const decoded = decodeURIComponent(next);
         if (decoded.includes("serviceId=")) {
@@ -56,7 +77,6 @@ function LoginContent() {
         }
       }
 
-      // Fallback: check sessionStorage for pending serviceId
       if (redirectPath === "/dashboard") {
         try {
           const pendingId = sessionStorage.getItem("pendingServiceId");
@@ -65,7 +85,7 @@ function LoginContent() {
             redirectPath = `/book?serviceId=${pendingId}`;
           }
         } catch (_) {
-          // sessionStorage unavailable; use fallback
+          // sessionStorage unavailable
         }
       }
 
@@ -87,31 +107,96 @@ function LoginContent() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              value={values.email}
-              onChange={handleChange("email")}
-              required
-            />
+          {/* Tab Navigation */}
+          <div className="mb-6 flex gap-2 border-b border-slate-200">
+            <button
+              onClick={() => {
+                setActiveTab("magic-link");
+                setError(null);
+                setMagicLinkSent(false);
+              }}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "magic-link"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Magic Link
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("password");
+                setError(null);
+              }}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "password"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Password
+            </button>
+          </div>
 
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              value={values.password}
-              onChange={handleChange("password")}
-              required
-            />
+          {/* Magic Link Tab */}
+          {activeTab === "magic-link" && (
+            <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
+              {magicLinkSent ? (
+                <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+                  Check your email — we sent you a login link. Click it to sign in.
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="magic-email"
+                    label="Email"
+                    type="email"
+                    autoComplete="email"
+                    value={magicLinkEmail}
+                    onChange={(e) => setMagicLinkEmail(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    loading={loading}
+                    className="w-full"
+                  >
+                    Send magic link
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
 
-            <Button type="submit" variant="primary" loading={loading} className="w-full">
-              Sign in
-            </Button>
-          </form>
+          {/* Password Tab */}
+          {activeTab === "password" && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <Input
+                id="email"
+                label="Email"
+                type="email"
+                autoComplete="email"
+                value={values.email}
+                onChange={handleChange("email")}
+                required
+              />
+
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                value={values.password}
+                onChange={handleChange("password")}
+                required
+              />
+
+              <Button type="submit" variant="primary" loading={loading} className="w-full">
+                Sign in
+              </Button>
+            </form>
+          )}
 
           <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
             <a href="/auth/register" className="hover:text-sky-700">

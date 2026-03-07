@@ -99,3 +99,17 @@ export async function logout(
   }
 }
 
+export async function sendMagicLink(
+  input: { email: string },
+  deps: AuthDependencies = createDefaultDeps(),
+): Promise<void> {
+  if (!input.email) {
+    throw new ValidationError("Email is required.");
+  }
+  try {
+    await deps.authRepo.sendMagicLink(input.email);
+  } catch (error) {
+    throw new InternalError("MAGIC_LINK_FAILED", "Unable to send magic link. Please try again.", { error });
+  }
+}
+

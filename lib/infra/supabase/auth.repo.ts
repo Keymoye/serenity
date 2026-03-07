@@ -10,8 +10,7 @@ export interface AuthRepository {
   }>;
   resetPasswordForEmail(email: string, redirectTo?: string): Promise<void>;
   signInWithGoogle(redirectUrl?: string): Promise<void>;
-  signInWithApple(redirectUrl?: string): Promise<void>;
-  signInWithOTP(email: string, redirectUrl?: string): Promise<void>;
+  sendMagicLink(email: string): Promise<void>;
 }
 
 export function createAuthRepository(): AuthRepository {
@@ -77,23 +76,13 @@ export function createAuthRepository(): AuthRepository {
       if (error) throw error;
     },
 
-    async signInWithApple(redirectUrl?: string) {
-      const supabase = await getSupabaseServerAuthClient();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "apple",
-        options: {
-          redirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-        },
-      });
-      if (error) throw error;
-    },
-
-    async signInWithOTP(email: string, redirectUrl?: string) {
+    async sendMagicLink(email: string) {
       const supabase = await getSupabaseServerAuthClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          shouldCreateUser: true,
         },
       });
       if (error) throw error;

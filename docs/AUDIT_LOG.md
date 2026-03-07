@@ -723,6 +723,123 @@ export async function confirmBooking(payload, context, deps) {
 **Integration tests** (future): Call emailService with test Resend API key, verify email queuing  
 **Smoke tests** (completed): Verify all templates render without runtime errors
 
+---
+
+## Auth Refactor: Replace Apple OAuth with Magic Link
+## Date: March 7, 2026
+## Status: ✅ COMPLETE
+
+### Problem Solved
+- Apple OAuth provider was cluttering auth UI
+- Magic link (passwordless) is simpler UX and more accessible
+- Users without Google account or Apple device had no easy sign-in option
+
+### Implementation Summary
+
+**Layer 1: Infrastructure** 
+- Removed `signInWithApple()` from auth.repo.ts interface and implementation
+- Renamed `signInWithOTP()` to `sendMagicLink(email)` with simplified signature
+- `sendMagicLink()` now handles `shouldCreateUser: true` automatically
+
+**Layer 2: Service**
+- Added `sendMagicLink(input: { email })` function to lib/application/auth.service.ts
+- Validates email, calls repo, handles errors via InternalError
+
+**Layer 3: API**
+- Created `/api/auth/magic-link/route.ts` POST handler
+- Validates email with Zod schema
+- Returns 400 on validation error, 200 on success (never assumes email is valid)
+- Uses mapErrorToLegacyHttp() for consistent error responses
+
+**Layer 4: UI**
+- Updated OAuthButtons.tsx: Removed Apple button, kept Google
+- Refactored login page with tab UI:
+  - **Magic Link tab (default)**: Email input, "Send magic link" button
+  - **Password tab**: Traditional email/password form
+  - Both tabs share Google OAuth at top
+  - Success message shows after magic link sent
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| lib/infra/supabase/auth.repo.ts | ✅ Removed signInWithApple(), renamed signInWithOTP to sendMagicLink |
+| lib/application/auth.service.ts | ✅ Added sendMagicLink() service function |
+| app/api/auth/magic-link/route.ts | ✅ Created new POST route |
+| components/auth/OAuthButtons.tsx | ✅ Removed Apple button |
+| app/(auth)/auth/login/page.tsx | ✅ Added tab UI with Magic Link (default) and Password tabs |
+| components/layout/PageHero.tsx | ✅ Fixed CTA button: changed bg-brand-500 → bg-stone-800 (white-on-white fix) |
+| docs/SETUP.md | ✅ Added "Authentication Methods" section with Magic Link + Google OAuth setup guides |
+
+### Architecture Compliance
+- ✅ No Supabase imports in UI (OAuthButtons uses client SDK for Google OAuth only — acceptable)
+- ✅ All layer boundaries respected: Infra → Service → API → UI
+- ✅ No business logic in API routes
+- ✅ Email validation via Zod in API layer
+- ✅ Error handling via mapErrorToLegacyHttp()
+
+### UX Flow: Magic Link Sign-In
+
+1. User lands on `/auth/login`
+2. **Sees tabs**: Magic Link (selected) | Password
+3. **Magic Link tab**: Email field + "Send magic link" button
+4. User enters email, clicks button
+5. Email sent via Supabase's default email provider
+6. Success message displays: "Check your email — we sent you a login link."
+7. User clicks link in email
+8. Supabase redirects to `/auth/callback?code=...&type=...`
+9. `app/auth/callback/route.ts` verifies session
+10. User redirected to `/dashboard`
+
+### UX Flow: Password Sign-In (Secondary Tab)
+
+1. User clicks "Password" tab
+2. Sees traditional email + password fields
+3. Existing sign-in flow unchanged
+4. Useful for users who prefer passwords or need quick re-login
+
+### Build Status
+```
+✓ Compiled successfully in 19.4s
+✓ Finished TypeScript in 18.7s
+✓ All 39 routes registered (new /api/auth/magic-link)
+✓ Exit Code: 0
+```
+
+### CTA Button Fix (Bonus)
+- **Problem**: Landing page "Book Now" button was white-on-white (used undefined `bg-brand-500`)
+- **Solution**: Changed to `bg-stone-800 text-white hover:bg-stone-700`
+- **Impact**: All primary CTA buttons now visible
+
+### Next Steps
+- Test magic link flow with real email address (requires RESEND or Supabase email config)
+- Monitor magic link click-through rate vs password sign-ins
+- Consider removing Password tab after Magic Link adoption proves successful
+  });
+  
+  // email failure does NOT throw or affect booking success
+  if (!emailResult.success) {
+    logger.warn("Booking confirmed but email send failed", { referenceCode });
+  }
+  
+  return { booking, referenceCode };
+}
+```
+
+### Security Considerations
+
+- RESEND_API_KEY is server-side only (never exposed to client)
+- Email addresses in templates are escaped (no injection vectors)
+- Cancellation URLs include reference code (no bearer tokens in email)
+- Admin email address is config-driven (not hardcoded)
+- Template data is passed as objects, not string concatenation (no template injection)
+
+### Testing Strategy
+
+**Unit tests** (future): Mock entire emailService calls in application service tests  
+**Integration tests** (future): Call emailService with test Resend API key, verify email queuing  
+**Smoke tests** (completed): Verify all templates render without runtime errors
+
 ### Next Steps
 - Feature 2 (Booking confirmation email): Will import and call `sendBookingConfirmation()` from booking.service.ts
 - Feature 3 (Admin notifications): Will import and call `sendAdminNewBookingNotification()` from booking.service.ts

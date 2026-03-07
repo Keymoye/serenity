@@ -43,9 +43,9 @@ export function PageHero({ title, subtitle, ctaLabel, ctaHref, imageSrc }: PageH
             {subtitle && <p className="text-sm text-stone-700">{subtitle}</p>}
             {ctaLabel && ctaHref && (
               ctaHref.startsWith('/book') ? (
-                <button onClick={handleBookingCta} className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">{ctaLabel}</button>
+                <button onClick={handleBookingCta} className="inline-flex items-center rounded-full bg-stone-800 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-700">{ctaLabel}</button>
               ) : (
-                <a href={ctaHref} className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">{ctaLabel}</a>
+                <a href={ctaHref} className="inline-flex items-center rounded-full bg-stone-800 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-700">{ctaLabel}</a>
               )
             )}
           </div>

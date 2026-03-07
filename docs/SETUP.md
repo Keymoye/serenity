@@ -28,6 +28,37 @@ SUPABASE_SERVICE_ROLE_KEY=service-role-key-here
 
 > **Security note**: never commit `SUPABASE_SERVICE_ROLE_KEY` to version control. The two `NEXT_PUBLIC_*` vars are safe for client transpilation.
 
+## Authentication Methods
+
+### Magic Link Sign-In
+Magic link authentication is enabled via Supabase OTP (one-time password) and requires no additional provider configuration. Users receive a sign-in link via email at `/api/auth/magic-link`.
+
+**Setup:** Ensure `NEXT_PUBLIC_APP_URL` environment variable is set to your app's full URL so that email redirect links work correctly:
+```env
+NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app  # production
+# OR
+NEXT_PUBLIC_APP_URL=http://localhost:3000            # local development
+```
+
+Supabase will automatically send magic link emails using its default email provider. For production, consider configuring a custom email provider in Supabase Dashboard → Authentication → Email Templates.
+
+### Google OAuth Setup
+To enable Google sign-in:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Navigate to **APIs & Services** → **Credentials**
+4. Create **OAuth 2.0 Client ID** (Web application type)
+5. Add authorized redirect URIs:
+   - `https://[your-project].supabase.co/auth/v1/callback`
+   - `http://localhost:3000/auth/callback` (for local testing)
+6. Copy your **Client ID** and **Client Secret**
+7. Go to Supabase Dashboard → **Authentication** → **Providers** → **Google**
+8. Enable and paste your Client ID and Client Secret
+9. Save changes
+
+Users can now sign in with Google via the "Continue with Google" button on the login page.
+
 ## Installation & Commands
 
 Install dependencies:
