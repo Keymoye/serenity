@@ -148,7 +148,7 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           <PageHero title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} subtitle="Book your first treatment and start relaxing." ctaLabel="Book now" ctaHref="/book" />
 
-          <EmptyState title="No bookings yet" message="You don’t have any bookings. When you do, they’ll appear here." ctaLabel="Book now" onCta={() => { window.location.href = '/book'; }} />
+          <EmptyState title="No bookings yet" message="You don’t have any bookings. When you do, they’ll appear here." ctaLabel="Book now" ctaHref="/book" />
         </div>
       </SectionWrapper>
     );

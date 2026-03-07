@@ -21,8 +21,15 @@ export async function POST(request: Request) {
     const json = (await request.json()) as { password?: string };
     const password = json.password;
 
+    if (!password) {
+      return NextResponse.json(
+        { error: "Password is required.", code: "VALIDATION_ERROR" },
+        { status: 400 }
+      );
+    }
+
     await updatePasswordForCurrentUser(
-      { password: password ?? "" },
+      { password },
       { userId: current.user.id, profileId: current.profile.id },
     );
 

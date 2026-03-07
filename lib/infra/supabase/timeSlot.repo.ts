@@ -61,22 +61,16 @@ export function createTimeSlotRepository(): TimeSlotRepository {
       if (error) throw error;
     },
 
-    async lockSlot(timeSlotId, lockUntilIso, nowIso) {
-      const supabase = await getSupabaseAdminClient();
-      const { data, error } = await supabase
-        .from("time_slots")
-        .update({
-          locked_until: lockUntilIso,
-        })
-        .eq("id", timeSlotId)
-        .eq("is_available", true)
-        .or(`locked_until.is.null,locked_until.lt.${nowIso}`)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      return Boolean(data);
-    },
-
+async lockSlot(timeSlotId, lockUntilIso, nowIso) {
+  const supabase = await getSupabaseAdminClient();
+  const { data, error } = await supabase.rpc('try_lock_slot', {
+    slot: timeSlotId,
+    lock_until: lockUntilIso,
+    now_ts: nowIso,
+  });
+  if (error) throw error;
+  return Boolean(data);
+},
     async tryMarkAsBooked(timeSlotId) {
       const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase

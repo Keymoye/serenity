@@ -52,9 +52,15 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const parsed = adminServiceSchema.parse(body);
+    const parsed = adminServiceSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
     const created = await createServiceAdmin(
-      parsed,
+      parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json(created, { status: 201 });
@@ -79,10 +85,16 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const parsed = adminServiceUpdateSchema.parse(body);
+    const parsed = adminServiceUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
     const updated = await updateServiceAdmin(
-      parsed.id,
-      parsed,
+      parsed.data.id,
+      parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json(updated);

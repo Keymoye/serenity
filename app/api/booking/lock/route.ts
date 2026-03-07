@@ -25,8 +25,15 @@ export async function POST(request: Request) {
     const json = (await request.json()) as LockRequestBody;
     const { timeSlotId } = json;
 
+    if (!timeSlotId) {
+      return NextResponse.json(
+        { error: "Missing required parameters", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
     await lockSlot(
-      { timeSlotId: timeSlotId ?? "" },
+      { timeSlotId },
       {
         userId: current.user.id,
         customerProfileId: current.profile.id,

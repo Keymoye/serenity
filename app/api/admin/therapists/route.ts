@@ -58,10 +58,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const parsed = adminTherapistSchema.parse(body);
+    const parsed = adminTherapistSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
 
     const created = await createTherapistAdmin(
-      parsed,
+      parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json(created, { status: 201 });
@@ -89,11 +95,17 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const parsed = adminTherapistUpdateSchema.parse(body);
+    const parsed = adminTherapistUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
 
     const updated = await updateTherapistAdmin(
-      parsed.id,
-      parsed,
+      parsed.data.id,
+      parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json(updated);
