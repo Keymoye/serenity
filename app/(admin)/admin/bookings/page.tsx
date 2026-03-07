@@ -9,7 +9,6 @@ import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
 import { pushToast } from "@/components/ui/Toast";
 
 type BookingRow = BookingSummary & {
-  customer_email?: string | null;
   customer_name?: string | null;
   service_name?: string | null;
   therapist_name?: string | null;
@@ -181,7 +180,7 @@ export default function AdminBookingsPage() {
                 {filtered.map((b) => (
                   <tr key={b.id}>
                     <td className="px-3 py-2">{b.reference_code ?? b.id}</td>
-                    <td className="px-3 py-2">{b.customer_email ?? b.customer_name ?? '—'}</td>
+                    <td className="px-3 py-2">{b.customer_name ?? '—'}</td>
                     <td className="px-3 py-2">{b.service_name ?? '—'}</td>
                     <td className="px-3 py-2">{b.therapist_name ?? '—'}</td>
                     <td className="px-3 py-2">{b.slot_start ? new Date(b.slot_start).toLocaleString() : '—'}</td>

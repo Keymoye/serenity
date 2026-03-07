@@ -9,6 +9,9 @@ export interface AuthRepository {
     requiresEmailConfirmation: boolean;
   }>;
   resetPasswordForEmail(email: string, redirectTo?: string): Promise<void>;
+  signInWithGoogle(redirectUrl?: string): Promise<void>;
+  signInWithApple(redirectUrl?: string): Promise<void>;
+  signInWithOTP(email: string, redirectUrl?: string): Promise<void>;
 }
 
 export function createAuthRepository(): AuthRepository {
@@ -59,6 +62,39 @@ export function createAuthRepository(): AuthRepository {
       const supabase = await getSupabaseServerAuthClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
+      });
+      if (error) throw error;
+    },
+
+    async signInWithGoogle(redirectUrl?: string) {
+      const supabase = await getSupabaseServerAuthClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    },
+
+    async signInWithApple(redirectUrl?: string) {
+      const supabase = await getSupabaseServerAuthClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    },
+
+    async signInWithOTP(email: string, redirectUrl?: string) {
+      const supabase = await getSupabaseServerAuthClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        },
       });
       if (error) throw error;
     },

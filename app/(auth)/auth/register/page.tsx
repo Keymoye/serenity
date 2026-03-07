@@ -11,6 +11,7 @@ import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
 
 const INITIAL_VALUES: RegisterInput = {
   email: "",
@@ -64,6 +65,8 @@ export default function RegisterPage() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <Card className="w-full max-w-md">
           <h1 className="mb-6 text-2xl font-semibold text-slate-900">Create account</h1>
+
+          <OAuthButtons />
 
           {error && (
             <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -9,7 +9,6 @@ export interface BookingRepository {
       id: string;
       reference_code: string | null;
       customer_name: string | null;
-      customer_email: string | null;
       service_name: string | null;
       therapist_name: string | null;
       slot_start: string | null;
@@ -62,7 +61,7 @@ export function createBookingRepository(): BookingRepository {
           reference_code,
           status,
           created_at,
-          profiles!customer_id(name, email),
+          profiles!customer_id(name),
           services!service_id(name),
           therapists!therapist_id(name),
           time_slots!time_slot_id(start_time)
@@ -75,7 +74,7 @@ export function createBookingRepository(): BookingRepository {
         reference_code: string | null;
         status: string | null;
         created_at: string | null;
-        profiles: { name: string | null; email: string | null } | null;
+        profiles: { name: string | null } | null;
         services: { name: string | null } | null;
         therapists: { name: string | null } | null;
         time_slots: { start_time: string } | null;
@@ -86,7 +85,6 @@ export function createBookingRepository(): BookingRepository {
         id: r.id,
         reference_code: r.reference_code,
         customer_name: r.profiles?.name ?? null,
-        customer_email: r.profiles?.email ?? null,
         service_name: r.services?.name ?? null,
         therapist_name: r.therapists?.name ?? null,
         slot_start: r.time_slots?.start_time ?? null,

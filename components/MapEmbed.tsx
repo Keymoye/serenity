@@ -12,8 +12,14 @@ export function MapEmbed({ coordinates, address, openingHours }: MapEmbedProps) 
     typeof coordinates?.lat === "number" &&
     typeof coordinates?.lng === "number";
 
-  // For now we render a styled card; later you can replace this with an
-  // actual map widget (Google Maps, Mapbox, etc.) while keeping this API.
+  // Generate Google Maps embed URL and directions link
+  const mapsEmbedUrl = hasCoordinates
+    ? `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${coordinates.lng}!3d${coordinates.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDkuMjgyNzY3LDEyLjY0MzYyNzg!5e0!3m2!1sen!2s`
+    : null;
+
+  const directionsUrl = hasCoordinates
+    ? `https://www.google.com/maps/dir/?api=1&destination=${coordinates.lat},${coordinates.lng}`
+    : `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
 
   return (
     <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
@@ -26,19 +32,34 @@ export function MapEmbed({ coordinates, address, openingHours }: MapEmbedProps) 
         </p>
       </div>
 
-      <div className="mb-3 rounded-lg bg-slate-200/80 px-3 py-6 text-center text-xs text-slate-600">
-        {hasCoordinates ? (
+      {hasCoordinates && mapsEmbedUrl ? (
+        <div className="mb-3 overflow-hidden rounded-lg border border-slate-200">
+          <iframe
+            width="100%"
+            height="200"
+            loading="lazy"
+            allowFullScreen
+            src={mapsEmbedUrl}
+            style={{ border: 0 }}
+          />
+        </div>
+      ) : (
+        <div className="mb-3 rounded-lg bg-slate-200/80 px-3 py-6 text-center text-xs text-slate-600">
           <p>
-            Map preview for ({coordinates.lat.toFixed(4)},{" "}
-            {coordinates.lng.toFixed(4)}) – integrate your preferred map
-            provider here.
+            Map location not available. Use the Get Directions button to navigate.
           </p>
-        ) : (
-          <p>
-            Map unavailable in this environment. Add a live map integration
-            later.
-          </p>
-        )}
+        </div>
+      )}
+
+      <div className="mb-3 space-y-2">
+        <a
+          href={directionsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 transition-colors"
+        >
+          Get Directions
+        </a>
       </div>
 
       <div>
