@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LogoutButton } from '@/components/layout/LogoutButton';
 import type { CurrentUser } from '@/lib/services/authService';
 
 interface SpaNavbarProps {
@@ -30,7 +31,7 @@ export function SpaNavbar({ current }: SpaNavbarProps) {
               {isAdmin && (
                 <Link href="/admin" className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block">Admin</Link>
               )}
-              <Link href="/api/auth/logout" className="rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100">Logout</Link>
+              <LogoutButton />
             </>
           ) : (
             <>

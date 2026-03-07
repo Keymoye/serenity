@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
+import { getCurrentUser } from "@/lib/services/authService";
 import { logger } from "@/lib/utils/logger";
 import { lockSlot } from "@/lib/application/booking.service";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
