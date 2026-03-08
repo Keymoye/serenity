@@ -11,3 +11,13 @@ export interface Service {
   updated_at: string | null;
 }
 
+export interface ServiceWithTherapists extends Service {
+  therapists: Array<{
+    id: string
+    name: string
+    title: string | null
+    photo_url: string | null
+    is_active: boolean
+  }>
+}
+

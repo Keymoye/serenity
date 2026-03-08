@@ -329,3 +329,45 @@ export async function getAdminMetrics(
   return { bookingsThisMonth, upcomingToday, unreadMessages, bookingsLast7Days };
 }
 
+export async function assignServicesToTherapistAdmin(
+  therapistId: string,
+  serviceIds: string[],
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps(),
+): Promise<void> {
+  assertAdmin(context);
+  await deps.serviceRepo.assignServicesToTherapist(
+    therapistId,
+    serviceIds
+  );
+}
+
+export async function assignTherapistsToServiceAdmin(
+  serviceId: string,
+  therapistIds: string[],
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps(),
+): Promise<void> {
+  assertAdmin(context);
+  await deps.serviceRepo.assignTherapistsToService(
+    serviceId,
+    therapistIds
+  );
+}
+
+export async function listAllServicesForAssignment(
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps(),
+): Promise<Array<{ id: string; name: string; category: string | null }>> {
+  assertAdmin(context);
+  return deps.serviceRepo.listAllServicesAdmin();
+}
+
+export async function listAllTherapistsForAssignment(
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps(),
+): Promise<Array<{ id: string; name: string; title: string | null }>> {
+  assertAdmin(context);
+  return deps.serviceRepo.listAllTherapistsAdmin();
+}
+

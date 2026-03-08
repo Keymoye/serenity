@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
@@ -31,13 +31,58 @@ export default function TherapistForm({ initial, onSaved }: Props) {
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allServices, setAllServices] = useState<
+    Array<{ id: string; name: string; category: string | null }>
+  >([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    []
+  );
+  const [loadingServices, setLoadingServices] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      setLoadingServices(true);
+      try {
+        // Load all available services
+        const res = await fetch(
+          '/api/admin/therapists?forAssignment=true'
+        );
+        const data = await res.json();
+        setAllServices(data.services ?? []);
+
+        // If editing, load current assignments
+        if ((initial as TherapistInput)?.id) {
+          const assignRes = await fetch(
+            `/api/therapists/${(initial as TherapistInput).id}`
+          );
+          const assignData = await assignRes.json();
+          const currentIds = (assignData.services ?? [])
+            .map((s: { id: string }) => s.id);
+          setSelectedServiceIds(currentIds);
+        }
+      } catch {
+        // silently fail — assignments are not critical
+      } finally {
+        setLoadingServices(false);
+      }
+    }
+    load();
+  }, [(initial as TherapistInput)?.id]);
+
+  function toggleService(serviceId: string) {
+    setSelectedServiceIds((prev) =>
+      prev.includes(serviceId)
+        ? prev.filter((id) => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive) };
+      const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive), serviceIds: selectedServiceIds };
       if ((initial as TherapistInput)?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
@@ -96,6 +141,53 @@ export default function TherapistForm({ initial, onSaved }: Props) {
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
           <span className="text-sm text-slate-700">Active</span>
         </label>
+      </div>
+      <div>
+        <label className="block text-sm font-medium 
+                           text-stone-700 mb-2">
+          Services offered
+        </label>
+        {loadingServices ? (
+          <p className="text-sm text-stone-400">
+            Loading services...
+          </p>
+        ) : allServices.length === 0 ? (
+          <p className="text-sm text-stone-400">
+            No services available
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-48 
+                          overflow-y-auto border 
+                          border-stone-200 rounded-xl p-3">
+            {allServices.map((service) => (
+              <label
+                key={service.id}
+                className="flex items-center gap-3 
+                           cursor-pointer group"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedServiceIds.includes(
+                    service.id
+                  )}
+                  onChange={() => toggleService(service.id)}
+                  className="h-4 w-4 rounded border-stone-300 
+                             text-stone-800 
+                             focus:ring-stone-500"
+                />
+                <span className="text-sm text-stone-700 
+                                 group-hover:text-stone-900">
+                  {service.name}
+                  {service.category && (
+                    <span className="text-stone-400 ml-1">
+                      · {service.category}
+                    </span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
       <div>
         <button

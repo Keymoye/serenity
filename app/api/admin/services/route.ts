@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { getCurrentUser } from "@/lib/services/authService";
@@ -8,13 +8,15 @@ import {
   createServiceAdmin,
   updateServiceAdmin,
   deleteServiceAdmin,
+  assignTherapistsToServiceAdmin,
+  listAllTherapistsForAssignment,
 } from "@/lib/application/admin.service";
 import {
   adminServiceSchema,
   adminServiceUpdateSchema,
 } from "@/lib/domain/admin.types";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const correlationId = randomUUID();
   const log = logger.withContext({ correlationId, route: "admin.services.GET" });
 
@@ -27,6 +29,17 @@ export async function GET() {
       );
     }
 
+    const url = new URL(request.url);
+
+    // If ?forAssignment=true return all therapists list
+    if (url.searchParams.get('forAssignment') === 'true') {
+      const therapists = await listAllTherapistsForAssignment(
+        { userId: current.user.id, role: current.profile.role }
+      );
+      return NextResponse.json({ therapists });
+    }
+
+    // Otherwise existing list behaviour
     const items = await listServices(
       { userId: current.user.id, role: current.profile.role },
     );
@@ -63,6 +76,15 @@ export async function POST(req: Request) {
       parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
+
+    if (parsed.data.therapistIds !== undefined) {
+      await assignTherapistsToServiceAdmin(
+        created.id,
+        parsed.data.therapistIds,
+        { userId: current.user.id, role: current.profile.role }
+      );
+    }
+
     return NextResponse.json(created, { status: 201 });
   } catch (error: unknown) {
     log.error("POST /api/admin/services failed", error);
@@ -97,6 +119,15 @@ export async function PUT(req: Request) {
       parsed.data,
       { userId: current.user.id, role: current.profile.role },
     );
+
+    if (parsed.data.therapistIds !== undefined) {
+      await assignTherapistsToServiceAdmin(
+        parsed.data.id,
+        parsed.data.therapistIds,
+        { userId: current.user.id, role: current.profile.role }
+      );
+    }
+
     return NextResponse.json(updated);
   } catch (error: unknown) {
     log.error("PUT /api/admin/services failed", error);

@@ -146,6 +146,7 @@ export const adminServiceSchema = z.object({
     .min(0, "Price cannot be negative.")
     .max(10000, "Price seems too high."),
   is_active: z.boolean().optional(),
+  therapistIds: z.array(z.string().uuid()).optional(),
 });
 
 export type AdminServiceInput = z.infer<typeof adminServiceSchema>;
@@ -171,6 +172,7 @@ export const adminTherapistSchema = z.object({
     .optional()
     .or(z.literal("")),
   is_active: z.boolean().optional(),
+  serviceIds: z.array(z.string().uuid()).optional(),
 });
 
 export type AdminTherapistInput = z.infer<typeof adminTherapistSchema>;

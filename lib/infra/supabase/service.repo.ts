@@ -54,6 +54,10 @@ export interface ServiceRepository {
   updateService(id: string, payload: Partial<Omit<Service, "id">>): Promise<Service>;
   deleteService(id: string): Promise<void>;
   isTherapistAssignedToService(serviceId: string, therapistId: string): Promise<boolean>;
+  assignServicesToTherapist(therapistId: string, serviceIds: string[]): Promise<void>;
+  assignTherapistsToService(serviceId: string, therapistIds: string[]): Promise<void>;
+  listAllServicesAdmin(): Promise<Array<{ id: string; name: string; category: string | null }>>;
+  listAllTherapistsAdmin(): Promise<Array<{ id: string; name: string; title: string | null }>>;
 }
 
 export function createServiceRepository(): ServiceRepository {
@@ -245,6 +249,92 @@ export function createServiceRepository(): ServiceRepository {
         .maybeSingle();
       if (error) throw error;
       return Boolean(data);
+    },
+
+    async assignServicesToTherapist(
+      therapistId: string,
+      serviceIds: string[]
+    ): Promise<void> {
+      const supabase = await getSupabaseAdminClient();
+
+      // First delete all existing assignments for therapist
+      const { error: deleteError } = await supabase
+        .from('therapist_service')
+        .delete()
+        .eq('therapist_id', therapistId);
+
+      if (deleteError) throw deleteError;
+
+      // If no services to assign, we are done
+      if (serviceIds.length === 0) return;
+
+      // Insert new assignments
+      const rows = serviceIds.map((serviceId) => ({
+        therapist_id: therapistId,
+        service_id: serviceId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('therapist_service')
+        .insert(rows);
+
+      if (insertError) throw insertError;
+    },
+
+    async assignTherapistsToService(
+      serviceId: string,
+      therapistIds: string[]
+    ): Promise<void> {
+      const supabase = await getSupabaseAdminClient();
+
+      // First delete all existing assignments for service
+      const { error: deleteError } = await supabase
+        .from('therapist_service')
+        .delete()
+        .eq('service_id', serviceId);
+
+      if (deleteError) throw deleteError;
+
+      // If no therapists to assign, we are done
+      if (therapistIds.length === 0) return;
+
+      // Insert new assignments
+      const rows = therapistIds.map((therapistId) => ({
+        service_id: serviceId,
+        therapist_id: therapistId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('therapist_service')
+        .insert(rows);
+
+      if (insertError) throw insertError;
+    },
+
+    async listAllServicesAdmin(): Promise<
+      Array<{ id: string; name: string; category: string | null }>
+    > {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, category')
+        .order('name');
+
+      if (error) throw error;
+      return data ?? [];
+    },
+
+    async listAllTherapistsAdmin(): Promise<
+      Array<{ id: string; name: string; title: string | null }>
+    > {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from('therapists')
+        .select('id, name, title')
+        .order('name');
+
+      if (error) throw error;
+      return data ?? [];
     },
   };
 }

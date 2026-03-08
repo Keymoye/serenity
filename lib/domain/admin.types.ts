@@ -28,3 +28,11 @@ export type AdminTherapistInput = BaseAdminTherapistInput;
 export type AdminTimeSlotCreateInput = BaseAdminTimeSlotCreateInput;
 export type AdminBookingStatusInput = BaseAdminBookingStatusInput;
 
+export interface ServiceAssignmentInput {
+  serviceIds: string[]
+}
+
+export interface TherapistAssignmentInput {
+  therapistIds: string[]
+}
+
