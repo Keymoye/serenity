@@ -65,7 +65,7 @@ export default function AdminMessagesPage() {
         ) : error ? (
           <p className="px-4 py-4 text-sm text-red-600">{error}</p>
         ) : messages.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-slate-600">No messages received yet.</p>
+          <div className="px-4 py-4 text-sm text-slate-600">No messages received yet.</div>
         ) : (
           <ul className="divide-y divide-slate-200">
             {messages.map((msg) => (
