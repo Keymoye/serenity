@@ -89,7 +89,7 @@ function LoginContent() {
         }
       }
 
-      router.push(redirectPath);
+      window.location.href = redirectPath;
     }
   };
 
