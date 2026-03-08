@@ -763,15 +763,20 @@ export async function confirmBooking(payload, context, deps) {
 
 | File | Change |
 |------|--------|
-| lib/infra/supabase/auth.repo.ts | ✅ Removed signInWithApple(), renamed signInWithOTP to sendMagicLink |
-| lib/application/auth.service.ts | ✅ Added sendMagicLink() service function |
-| app/api/auth/magic-link/route.ts | ✅ Created new POST route |
-| components/auth/OAuthButtons.tsx | ✅ Removed Apple button |
-| app/(auth)/auth/login/page.tsx | ✅ Added tab UI with Magic Link (default) and Password tabs |
-| components/layout/PageHero.tsx | ✅ Fixed CTA button: changed bg-brand-500 → bg-stone-800 (white-on-white fix) |
-| docs/SETUP.md | ✅ Added "Authentication Methods" section with Magic Link + Google OAuth setup guides |
+| lib/infra/supabase/auth.repo.ts | Removed signInWithApple(), renamed signInWithOTP to sendMagicLink |
+| lib/application/auth.service.ts | Added sendMagicLink() service function |
+| app/api/auth/magic-link/route.ts | Created new POST route |
+| components/auth/OAuthButtons.tsx | Removed Apple button |
+| app/(auth)/auth/login/page.tsx | Added tab UI with Magic Link (default) and Password tabs |
+| components/layout/PageHero.tsx | Fixed CTA button: changed bg-brand-500 → bg-stone-800 (white-on-white fix) |
+| docs/SETUP.md | Added "Authentication Methods" section with Magic Link + Google OAuth setup guides |
 
 ### Architecture Compliance
+- No Supabase imports in UI (OAuthButtons uses client SDK for Google OAuth only — acceptable)
+- All layer boundaries respected: Infra → Service → API → UI
+- No business logic in API routes
+- Email validation via Zod in API layer
+- Error handling via mapErrorToLegacyHttp()
 - ✅ No Supabase imports in UI (OAuthButtons uses client SDK for Google OAuth only — acceptable)
 - ✅ All layer boundaries respected: Infra → Service → API → UI
 - ✅ No business logic in API routes

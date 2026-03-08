@@ -34,7 +34,7 @@ export interface ServiceRepository {
     }>;
   }>;
   listTherapistsForService(serviceId: string): Promise<
-    Array<{ id: string; name: string; title: string | null; is_active?: boolean | null }>
+    Array<{ id: string; name: string; title: string | null; photo_url: string | null; is_active?: boolean | null }>
   >;
   listServicesForTherapist(therapistId: string): Promise<
     Array<{ id: string; name: string; category: string | null; duration_minutes: number | null; price: number | null; thumbnail_url: string | null }>
@@ -146,11 +146,11 @@ export function createServiceRepository(): ServiceRepository {
       const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("therapist_service")
-        .select("therapists(id, name, title, is_active)")
+        .select("therapists(id, name, title, photo_url, is_active)")
         .eq("service_id", serviceId);
       if (error) throw error;
 
-      type Therapist = { id: string; name: string; title: string | null; is_active?: boolean | null };
+      type Therapist = { id: string; name: string; title: string | null; photo_url: string | null; is_active?: boolean | null };
       type RawRow = { therapists: Therapist | null };
       const rows = (data ?? []) as unknown as RawRow[];
       return rows

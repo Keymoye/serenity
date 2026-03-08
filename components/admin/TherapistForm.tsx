@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 import type { AdminTherapistInput } from "@/lib/domain/admin.types";
 
@@ -24,6 +25,8 @@ export default function TherapistForm({ initial, onSaved }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [photoUrl, setPhotoUrl] = useState(initial?.photo_url ?? "");
+  // entityId is either existing therapist id or a temporary string
+  const entityId = (initial as TherapistInput)?.id ?? "new";
   const [bio, setBio] = useState(initial?.bio_short ?? "");
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
@@ -70,8 +73,14 @@ export default function TherapistForm({ initial, onSaved }: Props) {
         <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Photo URL</label>
-        <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+        <ImageUpload
+          currentUrl={photoUrl}
+          bucket="therapist-photos"
+          entityId={entityId}
+          onUpload={(url) => setPhotoUrl(url)}
+          label="Profile photo"
+          aspectRatio="square"
+        />
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">Bio</label>

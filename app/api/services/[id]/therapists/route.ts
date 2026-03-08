@@ -18,6 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
         id: t.id,
         name: t.name,
         title: t.title ?? null,
+        photo_url: t.photo_url ?? null,
       })),
     );
   } catch (error) {

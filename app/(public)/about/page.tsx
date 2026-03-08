@@ -2,6 +2,7 @@ import { logger } from "@/lib/utils/logger";
 import { listPublicTherapists } from "@/lib/application/therapist.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { Avatar } from "@/components/ui/Avatar";
 
 type Therapist = {
   id: string;
@@ -46,7 +47,7 @@ export default async function AboutPage() {
               {therapists.map((therapist) => (
                 <article key={therapist.id} className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-100 text-xs font-semibold text-stone-600">{therapist.name.split(" ").map((n) => n[0]).join("").slice(0, 3)}</div>
+                    <Avatar src={therapist.photo_url} name={therapist.name} size="lg" />
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">{therapist.name}</h3>
                       {therapist.title && (<p className="text-xs text-stone-600">{therapist.title}</p>)}

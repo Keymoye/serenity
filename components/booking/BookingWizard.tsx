@@ -8,6 +8,7 @@ import type { BookingConfirmInput } from "@/lib/utils/validation";
 import { apiFetch, postJson } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { pushToast } from "@/components/ui/Toast";
+import { Avatar } from "@/components/ui/Avatar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ type Therapist = {
   id: string;
   name: string;
   title: string | null;
+  photo_url: string | null;
 };
 
 type TimeSlot = {
@@ -447,6 +449,11 @@ export function BookingWizard({
                           : "border-slate-200 hover:bg-slate-50"
                       }`}
                     >
+                      <Avatar
+                        src={therapist.photo_url}
+                        name={therapist.name}
+                        size="sm"
+                      />
                       <span className="font-medium text-slate-900">
                         {therapist.name}
                       </span>
