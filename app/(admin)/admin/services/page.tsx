@@ -7,6 +7,8 @@ import {
 } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
+import { useRouter } from "next/navigation";
+import ServiceForm from "@/components/admin/ServiceForm";
 
 type ServiceRow = {
   id: string;
@@ -15,6 +17,7 @@ type ServiceRow = {
   duration_minutes: number | null;
   price: number | null;
   is_active: boolean | null;
+  thumbnail_url: string | null;
   updated_at: string | null;
 };
 
@@ -33,6 +36,7 @@ const INITIAL_FORM: AdminServiceInput = {
 };
 
 export default function AdminServicesPage() {
+  const router = useRouter();
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState>({
@@ -40,6 +44,8 @@ export default function AdminServicesPage() {
     error: null,
     isSubmitting: false,
   });
+  const [editingService, setEditingService] = useState<ServiceRow | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -170,6 +176,7 @@ export default function AdminServicesPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
               <tr>
+                <th className="px-3 py-2 text-left">Image</th>
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Category</th>
                 <th className="px-3 py-2 text-left">Duration</th>
@@ -182,7 +189,7 @@ export default function AdminServicesPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-3 py-4 text-sm text-slate-600"
                   >
                     Loading services...
@@ -191,7 +198,7 @@ export default function AdminServicesPage() {
               ) : services.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-3 py-4 text-sm text-slate-600"
                   >
                     No services defined yet.
@@ -200,6 +207,23 @@ export default function AdminServicesPage() {
               ) : (
                 services.map((service) => (
                   <tr key={service.id}>
+                    <td className="px-4 py-3">
+                      {service.thumbnail_url ? (
+                        <img
+                          src={service.thumbnail_url}
+                          alt={service.name}
+                          className="h-10 w-10 rounded-lg 
+                                     object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg 
+                                        bg-stone-100 flex items-center 
+                                        justify-center text-stone-400 
+                                        text-xs">
+                          No img
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-900">
                         {service.name}
@@ -231,6 +255,17 @@ export default function AdminServicesPage() {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
+                        onClick={() => {
+                          setEditingService(service)
+                          setShowForm(true)
+                        }}
+                        className="text-sm text-sky-600 
+                                   hover:text-sky-800 
+                                   transition-colors mr-2"
+                      >
+                        Edit
+                      </button>
+                      <button
                         type="button"
                         onClick={() => handleToggleActive(service)}
                         className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
@@ -250,93 +285,60 @@ export default function AdminServicesPage() {
         <h2 className="text-sm font-semibold text-slate-900">
           Create new service
         </h2>
-        {form.error && (
-          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {form.error}
-          </div>
-        )}
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-3 sm:grid-cols-2"
+        <button
+          onClick={() => {
+            setEditingService(null)
+            setShowForm(true)
+          }}
+          className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700"
         >
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Name
-            </label>
-            <input
-              type="text"
-              value={form.values.name}
-              onChange={handleChange("name")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Category
-            </label>
-            <input
-              type="text"
-              value={form.values.category ?? ""}
-              onChange={handleChange("category")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Duration (minutes)
-            </label>
-            <input
-              type="number"
-              min={15}
-              max={600}
-              value={form.values.duration_minutes}
-              onChange={handleChange("duration_minutes")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Price
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={form.values.price}
-              onChange={handleChange("price")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div className="sm:col-span-2 flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 text-xs text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.values.is_active ?? true}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    values: {
-                      ...prev.values,
-                      is_active: e.target.checked,
-                    },
-                  }))
-                }
-                className="h-3 w-3 rounded border-slate-300"
-              />
-              Active (visible for booking)
-            </label>
-            <button
-              type="submit"
-              disabled={form.isSubmitting}
-              className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-            >
-              {form.isSubmitting ? "Creating..." : "Create service"}
-            </button>
-          </div>
-        </form>
+          Add service
+        </button>
       </section>
+
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-start
+                     justify-center bg-black/40 
+                     overflow-y-auto p-4 pt-16"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl 
+                       w-full max-w-lg p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center 
+                            justify-between mb-4">
+              <h2 className="text-lg font-semibold 
+                             text-stone-800">
+                {editingService 
+                  ? "Edit service" 
+                  : "Add service"}
+              </h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-stone-400 
+                           hover:text-stone-600 
+                           text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <ServiceForm
+              initial={editingService ? {
+                ...editingService,
+                is_active: editingService.is_active ?? true
+              } : undefined}
+              onSaved={() => {
+                setShowForm(false)
+                setEditingService(null)
+                loadServices()
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

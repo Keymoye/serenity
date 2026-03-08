@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { adminTherapistSchema, type AdminTherapistInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
+import { useRouter } from "next/navigation";
+import TherapistForm from "@/components/admin/TherapistForm";
 
 type TherapistRow = {
   id: string;
@@ -24,9 +26,12 @@ const INITIAL_FORM: AdminTherapistInput = {
 };
 
 export default function AdminTherapistsPage() {
+  const router = useRouter();
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<{ values: AdminTherapistInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
+  const [editingTherapist, setEditingTherapist] = useState<TherapistRow | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const loadTherapists = useCallback(async () => {
     setLoading(true);
@@ -99,6 +104,7 @@ export default function AdminTherapistsPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
               <tr>
+                <th className="px-3 py-2 text-left">Photo</th>
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Title</th>
                 <th className="px-3 py-2 text-left">Status</th>
@@ -108,21 +114,53 @@ export default function AdminTherapistsPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-4 text-sm text-slate-600">Loading therapists...</td>
+                  <td colSpan={5} className="px-3 py-4 text-sm text-slate-600">Loading therapists...</td>
                 </tr>
               ) : therapists.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-4 text-sm text-slate-600">No therapists defined yet.</td>
+                  <td colSpan={5} className="px-3 py-4 text-sm text-slate-600">No therapists defined yet.</td>
                 </tr>
               ) : (
                 therapists.map((t) => (
                   <tr key={t.id}>
+                    <td className="px-4 py-3">
+                      {t.photo_url ? (
+                        <img
+                          src={t.photo_url}
+                          alt={t.name}
+                          className="h-10 w-10 rounded-full 
+                                     object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full 
+                                        bg-stone-100 flex items-center 
+                                        justify-center text-xs 
+                                        font-medium text-stone-600">
+                          {t.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2 font-medium text-slate-900">{t.name}</td>
                     <td className="px-3 py-2 text-slate-700">{t.title ?? "—"}</td>
                     <td className="px-3 py-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${t.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{t.is_active ? "Active" : "Hidden"}</span>
                     </td>
                     <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={() => {
+                          setEditingTherapist(t)
+                          setShowForm(true)
+                        }}
+                        className="text-sm text-sky-600 
+                                   hover:text-sky-800 
+                                   transition-colors mr-2"
+                      >
+                        Edit
+                      </button>
                       <button type="button" onClick={() => handleToggleActive(t)} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">{t.is_active ? "Deactivate" : "Activate"}</button>
                     </td>
                   </tr>
@@ -135,33 +173,63 @@ export default function AdminTherapistsPage() {
 
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">Create new therapist</h2>
-        {form.error && <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{form.error}</div>}
-        <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Name</label>
-            <input required type="text" value={form.values.name} onChange={(e) => setForm((p) => ({ ...p, values: { ...p.values, name: e.target.value } }))} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Title</label>
-            <input type="text" value={form.values.title ?? ""} onChange={handleChange("title")} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Photo URL</label>
-            <input type="text" value={form.values.photo_url ?? ""} onChange={handleChange("photo_url")} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Short bio</label>
-            <textarea value={form.values.bio_short ?? ""} onChange={handleChange("bio_short")} rows={3} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div className="sm:col-span-2 flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 text-xs text-slate-700">
-              <input type="checkbox" checked={form.values.is_active ?? true} onChange={(e) => setForm((prev) => ({ ...prev, values: { ...prev.values, is_active: e.target.checked } }))} className="h-3 w-3 rounded border-slate-300" />
-              Active
-            </label>
-            <button type="submit" disabled={form.isSubmitting} className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300">{form.isSubmitting ? "Creating..." : "Create therapist"}</button>
-          </div>
-        </form>
+        <button
+          onClick={() => {
+            setEditingTherapist(null)
+            setShowForm(true)
+          }}
+          className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700"
+        >
+          Add therapist
+        </button>
       </section>
+
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-start
+                     justify-center bg-black/40 
+                     overflow-y-auto p-4 pt-16"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl 
+                       w-full max-w-lg p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center 
+                            justify-between mb-4">
+              <h2 className="text-lg font-semibold 
+                             text-stone-800">
+                {editingTherapist 
+                  ? "Edit therapist" 
+                  : "Add therapist"}
+              </h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-stone-400 
+                           hover:text-stone-600 
+                           text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <TherapistForm
+              initial={editingTherapist ? {
+                name: editingTherapist.name,
+                title: editingTherapist.title ?? undefined,
+                photo_url: editingTherapist.photo_url ?? undefined,
+                bio_short: editingTherapist.bio_short ?? undefined,
+                is_active: editingTherapist.is_active ?? true
+              } : undefined}
+              onSaved={() => {
+                setShowForm(false)
+                setEditingTherapist(null)
+                loadTherapists()
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
