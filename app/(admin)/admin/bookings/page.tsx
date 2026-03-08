@@ -30,6 +30,7 @@ export default function AdminBookingsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [viewBooking, setViewBooking] = useState<BookingRow | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -104,7 +105,11 @@ export default function AdminBookingsPage() {
     const id = deletingId;
     setConfirmOpen(false);
     try {
-      const res = await fetch(`/api/admin/bookings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/bookings`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setBookings((prev) => prev.filter((r) => r.id !== id));
       pushToast('success', 'Booking deleted');
@@ -196,7 +201,7 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a href={`/admin/bookings/${b.id}`} className="text-sky-600">View</a>
+                        <button onClick={() => setViewBooking(b)} className="text-sky-600">View</button>
                         <button onClick={() => confirmDelete(b.id)} className="text-red-600">Delete</button>
                       </div>
                     </td>
@@ -208,6 +213,89 @@ export default function AdminBookingsPage() {
         )}
 
         <ConfirmDialog open={confirmOpen} title="Delete booking" description="Are you sure you want to delete this booking?" onCancel={() => setConfirmOpen(false)} onConfirm={doDelete} />
+
+        {viewBooking && (
+          <div
+            className="fixed inset-0 z-50 flex items-center 
+                       justify-center bg-black/40 p-4"
+            onClick={() => setViewBooking(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl 
+                         w-full max-w-md p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center 
+                              justify-between">
+                <h2 className="text-lg font-semibold 
+                               text-stone-800">
+                  Booking Details
+                </h2>
+                <button
+                  onClick={() => setViewBooking(null)}
+                  className="text-stone-400 
+                             hover:text-stone-600 
+                             transition-colors text-xl 
+                             leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Reference</dt>
+                  <dd className="font-medium text-stone-800">
+                    {viewBooking.reference_code}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Customer</dt>
+                  <dd className="font-medium text-stone-800">
+                    {viewBooking.customer_name ?? '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Service</dt>
+                  <dd className="font-medium text-stone-800">
+                    {viewBooking.service_name ?? '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Therapist</dt>
+                  <dd className="font-medium text-stone-800">
+                    {viewBooking.therapist_name ?? '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Date & Time</dt>
+                  <dd className="font-medium text-stone-800">
+                    {viewBooking.slot_start ? new Date(viewBooking.slot_start).toLocaleString() : '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Status</dt>
+                  <dd className="font-medium text-stone-800 
+                                capitalize">
+                    {viewBooking.status}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setViewBooking(null)}
+                  className="w-full px-4 py-2 bg-stone-100 
+                             text-stone-700 rounded-lg text-sm 
+                             font-medium hover:bg-stone-200 
+                             transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

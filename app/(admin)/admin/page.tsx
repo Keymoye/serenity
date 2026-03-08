@@ -9,7 +9,19 @@ export default async function AdminDashboardPage() {
   const current = await requireAdmin();
   if (!current) redirect("/dashboard");
 
-  const metrics = await getAdminMetrics({ userId: current.user.id, role: current.profile.role });
+  let metrics;
+  try {
+    metrics = await getAdminMetrics({ userId: current.user.id, role: current.profile.role });
+  } catch {
+    return (
+      <div className="p-6">
+        <p className="text-red-600 text-sm">
+          Failed to load dashboard data. 
+          Please refresh the page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

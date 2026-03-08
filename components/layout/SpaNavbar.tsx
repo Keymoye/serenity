@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LogoutButton } from '@/components/layout/LogoutButton';
+import { MobileMenu } from './MobileMenu';
 import type { CurrentUser } from '@/lib/services/authService';
 
 interface SpaNavbarProps {
@@ -39,6 +40,7 @@ export function SpaNavbar({ current }: SpaNavbarProps) {
               <Link href="/auth/register" className="hidden rounded-full bg-sky-600 px-3 py-1 font-medium text-white shadow-sm hover:bg-sky-700 md:inline-block">Sign up</Link>
             </>
           )}
+          <MobileMenu isLoggedIn={isAuthenticated} isAdmin={isAdmin} />
         </div>
       </div>
     </header>

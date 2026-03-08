@@ -763,8 +763,52 @@ export async function confirmBooking(payload, context, deps) {
 
 | File | Change |
 |------|--------|
-| lib/infra/supabase/auth.repo.ts | Removed signInWithApple(), renamed signInWithOTP to sendMagicLink |
-| lib/application/auth.service.ts | Added sendMagicLink() service function |
+---
+
+## UX Improvements — Batch 1
+## Date: March 8, 2026
+
+### Changes Made
+- Fixed: Admin bookings View action (modal instead of broken link)
+- Added: Click-outside-to-close on ConfirmDialog
+- Added: Click-outside-to-close on schedule modal
+- Added: Admin dashboard loading.tsx skeleton
+- Added: Admin dashboard error state
+- Added: Mobile hamburger menu for public nav (MobileMenu.tsx — slide-out drawer, right side)
+- Added: Admin sidebar navigation (AdminSidebar.tsx — desktop sidebar + mobile drawer)
+- Updated: admin/layout.tsx wraps content with sidebar
+
+### Files Created
+- components/layout/MobileMenu.tsx
+- components/layout/AdminSidebar.tsx
+- app/(admin)/admin/loading.tsx
+
+### Files Updated
+- app/(admin)/admin/bookings/page.tsx
+- components/layout/ConfirmDialog.tsx
+- app/(admin)/admin/schedule/page.tsx
+- app/(admin)/admin/page.tsx
+- components/layout/SpaNavbar.tsx
+- app/(admin)/admin/layout.tsx
+
+### Architecture
+All changes are UI layer only.
+No service, infra, or domain changes.
+4-layer rules respected.
+
+### Build
+- Exit code: 0
+- Routes: 22
+
+Report final table:
+| Improvement | Status | Build |
+|-------------|--------|-------|
+| 1. Bookings View modal | ✅ | 0 |
+| 2. Modal click-outside | ✅ | 0 |
+| 3. Dashboard loading state | ✅ | 0 |
+| 4. Public mobile nav | ✅ | 0 |
+| 5. Admin sidebar | ✅ | 0 |
+| Final build exit 0 | ✅ | 0 |
 | app/api/auth/magic-link/route.ts | Created new POST route |
 | components/auth/OAuthButtons.tsx | Removed Apple button |
 | app/(auth)/auth/login/page.tsx | Added tab UI with Magic Link (default) and Password tabs |

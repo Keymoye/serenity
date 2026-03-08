@@ -194,7 +194,7 @@ export default async function DashboardPage() {
           <h3 className="text-lg font-semibold text-spa-charcoal">Ready for your next session?</h3>
           <p className="text-sm text-stone-700">Book a treatment with our therapists today.</p>
           <div className="mt-3">
-            <Link href="/book" className="inline-flex items-center rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600">Book now</Link>
+            <Link href="/book" className="inline-flex items-center rounded-full bg-stone-800 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-700">Book now</Link>
           </div>
         </div>
       </div>

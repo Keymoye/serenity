@@ -13,8 +13,8 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ open, title = 'Confirm', description, onConfirm, onCancel }: ConfirmDialogProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="mx-4 max-w-lg rounded-xl bg-white p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
+      <div className="mx-4 max-w-lg rounded-xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
         {description && <p className="mt-2 text-xs text-slate-600">{description}</p>}
         <div className="mt-4 flex justify-end gap-2">
