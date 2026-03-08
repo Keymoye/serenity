@@ -4,7 +4,7 @@
  * No Supabase imports. No business logic.
  */
 
-export type UploadBucket = 'therapist-photos' | 'service-images' | 'spa-gallery' | 'spa-hero';
+export type UploadBucket = 'therapist-photos' | 'service-images' | 'spa-gallery' | 'spa-hero' | 'avatar-uploads';
 
 export type UploadEntityType = 'therapist' | 'service';
 
@@ -29,6 +29,7 @@ export const UPLOAD_BUCKETS: UploadBucket[] = [
   'service-images',
   'spa-gallery',
   'spa-hero',
+  'avatar-uploads',
 ];
 
 export const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB

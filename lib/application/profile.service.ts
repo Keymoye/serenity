@@ -20,7 +20,7 @@ function createDefaultDeps(): ProfileDependencies {
 }
 
 export async function updateProfile(
-  input: { name: string; phone?: string | null },
+  input: { name: string; phone?: string | null; avatar_url?: string | null },
   context: ProfileContext,
   deps: ProfileDependencies = createDefaultDeps(),
 ): Promise<void> {
@@ -34,6 +34,7 @@ export async function updateProfile(
     await deps.profileRepo.updateProfile(context.profileId, {
       name: input.name,
       phone: input.phone ?? null,
+      avatar_url: input.avatar_url,
     });
   } catch (error) {
     throw new InternalError("UPDATE_FAILED", "Unable to update profile.", { error });

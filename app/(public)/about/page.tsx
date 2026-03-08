@@ -3,6 +3,7 @@ import { listPublicTherapists } from "@/lib/application/therapist.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { Avatar } from "@/components/ui/Avatar";
+import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
 
 type Therapist = {
   id: string;
@@ -24,13 +25,14 @@ async function getTherapists(): Promise<Therapist[]> {
 
 export default async function AboutPage() {
   const therapists = await getTherapists();
+  const settings = await getPublicSiteSettings();
 
   return (
     <div>
       <PageHero
         title="Our story"
-        subtitle="Serenity Spa was founded with a simple belief: that true rest is not a luxury, but a necessity. Our space is designed as a calm, grounding refuge from a busy world, where every detail supports your nervous system in returning to balance."
-        imageSrc="/images/about-hero.jpg"
+        subtitle={settings.about_story}
+        imageSrc={settings.about_image_url || undefined}
       />
 
       <SectionWrapper>
@@ -41,7 +43,7 @@ export default async function AboutPage() {
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-slate-900">Meet the team</h2>
           {therapists.length === 0 ? (
-            <p className="text-sm text-slate-600">Our therapist roster is being finalized. Profiles will appear here once configured in the admin panel.</p>
+            <p className="text-sm text-slate-600">Our therapist roster is being finalized. Profiles will appear here once configured in admin panel.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {therapists.map((therapist) => (

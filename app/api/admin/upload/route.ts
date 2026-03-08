@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     const ext = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
-    const entityType = bucket === "therapist-photos" ? "therapist" : "service";
+    const entityType = bucket === "therapist-photos" ? "therapist" : bucket === "avatar-uploads" ? "user" : "service";
     const filename = `${entityType}-${entityId.trim()}-${Date.now()}.${ext}`;
 
     const buffer = await file.arrayBuffer();

@@ -79,6 +79,7 @@ export const profileUpdateSchema = z.object({
     .max(32, "Phone number is too long.")
     .optional()
     .or(z.literal("")),
+  avatar_url: z.string().nullable().optional(),
 });
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

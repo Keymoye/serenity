@@ -136,7 +136,7 @@ export default function AdminSchedulePage() {
       await apiFetch("/api/admin/time-slots", {
         method: "POST",
         body: JSON.stringify({
-          therapist_id: therapistIdForm,
+          therapistId: therapistIdForm,
           start_time: new Date(startDateTime).toISOString(),
           end_time: new Date(endDateTime).toISOString(),
         }),

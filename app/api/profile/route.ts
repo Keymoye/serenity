@@ -8,6 +8,31 @@ import {
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { updateProfile } from "@/lib/application/profile.service";
+import { createProfileRepository } from "@/lib/infra/supabase/profile.repo";
+
+export async function GET() {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "profile.get" });
+  
+  try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json(
+        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
+        { status: 401 }
+      );
+    }
+
+    const profileRepo = createProfileRepository();
+    const profile = await profileRepo.findById(current.user.id);
+    
+    return NextResponse.json({ profile });
+  } catch (error) {
+    log.error("Unexpected error in profile get route", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
+  }
+}
 
 export async function PATCH(request: Request) {
   const correlationId = randomUUID();
@@ -39,7 +64,11 @@ export async function PATCH(request: Request) {
 
     const payload: ProfileUpdateInput = parsed.data;
     await updateProfile(
-      { name: payload.name, phone: payload.phone || null },
+      { 
+        name: payload.name, 
+        phone: payload.phone || null,
+        avatar_url: payload.avatar_url 
+      },
       { userId: current.user.id, profileId: current.profile.id },
     );
 

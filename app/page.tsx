@@ -5,6 +5,7 @@ import Link from "next/link";
 import { listFeaturedServices } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
 
 async function getFeaturedServices(): Promise<ServiceSummary[]> {
   try {
@@ -18,15 +19,16 @@ async function getFeaturedServices(): Promise<ServiceSummary[]> {
 
 export default async function Home() {
   const featuredServices = await getFeaturedServices();
+  const settings = await getPublicSiteSettings();
 
   return (
     <div className="space-y-12">
       <PageHero
-        title="Unwind, restore, and recharge at Serenity Spa."
-        subtitle="Book massages, facials, and tailored wellness rituals in just a few clicks. Real-time availability, expert therapists, and a peaceful escape in the heart of the city."
+        title={`Unwind, restore, and recharge at ${settings.spa_name}.`}
+        subtitle={settings.tagline}
         ctaLabel="Book now"
         ctaHref="/book"
-        imageSrc="/images/hero-spa.jpg"
+        imageSrc={settings.hero_image_url || undefined}
       />
 
       <SectionWrapper>
@@ -52,15 +54,15 @@ export default async function Home() {
       <SectionWrapper variant="muted">
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">About Serenity Spa</h2>
-            <p className="text-sm text-slate-700">Serenity Spa is a boutique wellness studio focused on restorative treatments, mindful rituals, and personalized care. Our experienced therapists blend traditional techniques with modern modalities to help you reset from the inside out.</p>
+            <h2 className="text-lg font-semibold text-slate-900">About {settings.spa_name}</h2>
+            <p className="text-sm text-slate-700">{settings.about_story}</p>
             <Link href="/about" className="inline-flex items-center text-sm font-medium text-sky-700 hover:underline">Read our story</Link>
           </div>
 
           <MapEmbed
-            coordinates={{ lat: 37.7749, lng: -122.4194 }}
-            address="123 Tranquility Lane, Wellness City"
-            openingHours={["Mon–Fri · 9:00–19:00", "Sat–Sun · 10:00–18:00"]}
+            coordinates={{ lat: parseFloat(settings.location_lat), lng: parseFloat(settings.location_lng) }}
+            address={settings.address}
+            openingHours={settings.opening_hours}
           />
         </div>
       </SectionWrapper>
@@ -68,7 +70,7 @@ export default async function Home() {
       <SectionWrapper>
         <div className="space-y-4 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Guest experiences</h2>
-          <p className="text-sm text-slate-700">A few words from guests who have made Serenity Spa part of their self‑care routine.</p>
+          <p className="text-sm text-slate-700">A few words from guests who have made {settings.spa_name} part of their self-care routine.</p>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-xl bg-stone-50 p-4 text-sm text-stone-700">“From the moment I walked in, I felt calmer. The online booking is so convenient.”<p className="mt-2 text-xs text-stone-500">— Daniel</p></div>
             <div className="rounded-xl bg-stone-50 p-4 text-sm text-stone-700">“The therapists listened to exactly what I needed. I left feeling renewed.”<p className="mt-2 text-xs text-stone-500">— Aisha</p></div>

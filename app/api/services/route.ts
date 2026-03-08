@@ -18,6 +18,7 @@ export async function GET() {
         name: s.name,
         category: s.category ?? null,
         duration_minutes: s.duration_minutes ?? null,
+        thumbnail_url: s.thumbnail_url ?? null,
       })),
     );
   } catch (error) {

@@ -11,6 +11,7 @@ export interface AppProfile {
   name: string | null;
   phone: string | null;
   role: AppRole;
+  avatar_url?: string | null;
 }
 
 export interface CurrentUser {

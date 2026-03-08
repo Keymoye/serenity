@@ -11,6 +11,13 @@ export interface Service {
   updated_at: string | null;
 }
 
+export interface ServiceImage {
+  id: string;
+  service_id: string;
+  image_url: string;
+  sort_order: number | null;
+}
+
 export interface ServiceWithTherapists extends Service {
   therapists: Array<{
     id: string

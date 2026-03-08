@@ -61,9 +61,9 @@ export default function AdminMessagesPage() {
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="px-4 py-4 text-center"><Spinner /></p>
+          <div className="px-4 py-4 text-center"><Spinner /></div>
         ) : error ? (
-          <p className="px-4 py-4 text-sm text-red-600">{error}</p>
+          <div className="px-4 py-4 text-sm text-red-600">{error}</div>
         ) : messages.length === 0 ? (
           <div className="px-4 py-4 text-sm text-slate-600">No messages received yet.</div>
         ) : (

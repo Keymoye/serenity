@@ -99,7 +99,13 @@ export default async function ServiceDetailPage({
             ) : (
               <div className="grid gap-3 sm:grid-cols-3">
                 {images.map((img) => (
-                  <div key={img.id} className="aspect-[4/3] rounded-xl bg-stone-100" />
+                  <div key={img.id} className="aspect-[4/3] overflow-hidden rounded-xl bg-stone-100">
+                    <img
+                      src={img.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ))}
               </div>
             )}

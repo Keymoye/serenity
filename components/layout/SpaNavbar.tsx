@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LogoutButton } from '@/components/layout/LogoutButton';
 import { MobileMenu } from './MobileMenu';
+import { Avatar } from '@/components/ui/Avatar';
 import type { CurrentUser } from '@/lib/services/authService';
 
 interface SpaNavbarProps {
@@ -28,7 +29,14 @@ export function SpaNavbar({ current }: SpaNavbarProps) {
           {isAuthenticated ? (
             <>
               <Link href="/dashboard" className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block">Dashboard</Link>
-              <Link href="/profile" className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block">Profile</Link>
+              <div className="flex items-center gap-2">
+                <Avatar
+                  src={current?.profile?.avatar_url ?? null}
+                  name={current?.profile?.name ?? ''}
+                  size="sm"
+                />
+                <Link href="/profile" className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block">Profile</Link>
+              </div>
               {isAdmin && (
                 <Link href="/admin" className="hidden rounded-full px-3 py-1 text-slate-700 hover:bg-slate-100 md:inline-block">Admin</Link>
               )}
