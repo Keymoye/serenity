@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { getCurrentUser } from "@/lib/services/authService";
@@ -93,5 +93,51 @@ export async function POST(request: Request) {
     log.error("POST /api/admin/upload failed", error);
     const { status, body } = mapErrorToLegacyHttp(error);
     return NextResponse.json(body, { status });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const correlationId = randomUUID()
+  try {
+    // Auth + admin check (same pattern as POST)
+    const current = await getCurrentUser()
+    if (!current) {
+      return NextResponse.json(
+        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
+        { status: 401 }
+      )
+    }
+    if (current.profile.role !== "admin") {
+      return NextResponse.json(
+        { error: "Forbidden.", code: "FORBIDDEN" },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { bucket, filename } = body
+
+    if (!bucket || !UPLOAD_BUCKETS.includes(bucket as UploadBucket)) {
+      return NextResponse.json(
+        { error: "Invalid bucket", code: "INVALID_BUCKET" },
+        { status: 400 }
+      )
+    }
+
+    if (!filename || typeof filename !== 'string') {
+      return NextResponse.json(
+        { error: "Missing filename", code: "MISSING_FILENAME" },
+        { status: 400 }
+      )
+    }
+
+    const storageRepo = createStorageRepository()
+    await storageRepo.deleteFile(bucket as UploadBucket, filename)
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    const { status, body } = mapErrorToLegacyHttp(error)
+    return NextResponse.json(body, { status })
   }
 }
