@@ -1,4 +1,4 @@
-import type { Service } from "../domain/service.types";
+import type { Service, ServiceImage, ServiceImageAddInput } from "../domain/service.types";
 import type { Therapist } from "../domain/therapist.types";
 import type { TimeSlot } from "../domain/timeSlot.types";
 import type { AdminServiceInput, AdminTherapistInput, AdminBookingStatusInput } from "../domain/admin.types";
@@ -371,3 +371,30 @@ export async function listAllTherapistsForAssignment(
   return deps.serviceRepo.listAllTherapistsAdmin();
 }
 
+export async function addServiceImageAdmin(
+  input: ServiceImageAddInput,
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps()
+): Promise<ServiceImage> {
+  assertAdmin(context);
+  return deps.serviceRepo.addServiceImage(input)
+}
+
+export async function deleteServiceImageAdmin(
+  id: string,
+  serviceId: string,
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps()
+): Promise<void> {
+  assertAdmin(context);
+  return deps.serviceRepo.deleteServiceImage(id)
+}
+
+export async function listServiceImagesAdmin(
+  serviceId: string,
+  context: AdminContext,
+  deps: AdminDependencies = createDefaultDeps()
+): Promise<ServiceImage[]> {
+  assertAdmin(context);
+  return deps.serviceRepo.listServiceImages(serviceId)
+}

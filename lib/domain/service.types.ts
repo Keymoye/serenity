@@ -28,3 +28,14 @@ export interface ServiceWithTherapists extends Service {
   }>
 }
 
+export interface ServiceImageAddInput {
+  service_id: string
+  image_url: string
+  sort_order?: number
+}
+
+export interface ServiceImageDeleteInput {
+  id: string
+  service_id: string
+}
+

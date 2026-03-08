@@ -4,6 +4,7 @@ import { MapEmbed } from "@/components/MapEmbed";
 import { getPublicServiceDetail } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { Avatar } from "@/components/ui/Avatar";
 
 type ServiceDetailPageProps = {
   params: { id: string };
@@ -70,7 +71,11 @@ export default async function ServiceDetailPage({
         subtitle={service.description ?? "A deeply restorative treatment designed to calm the nervous system, release tension, and leave you feeling centered and renewed."}
         ctaLabel="Book this service"
         ctaHref={`/book?serviceId=${encodeURIComponent(service.id)}`}
-        imageSrc={images[0]?.image_url ?? "/images/service-placeholder.jpg"}
+        imageSrc={
+          images[0]?.image_url
+          ?? service?.thumbnail_url
+          ?? undefined
+        }
       />
 
       <SectionWrapper>
@@ -81,11 +86,6 @@ export default async function ServiceDetailPage({
               {service.duration_minutes && (<span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">{service.duration_minutes} minutes</span>)}
               {service.price != null && (<span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">${service.price.toFixed(2)}</span>)}
             </div>
-          </div>
-
-          <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="aspect-video w-full rounded-xl bg-stone-100" />
-            <p className="text-xs text-stone-600">This area can showcase a hero image or short gallery of the treatment room. Configure the <code className="rounded bg-stone-100 px-1 py-0.5 text-[10px]">service_images</code> table to manage these assets.</p>
           </div>
         </div>
       </SectionWrapper>
@@ -119,7 +119,11 @@ export default async function ServiceDetailPage({
               <ul className="space-y-3">
                 {therapists.map((therapist) => (
                   <li key={therapist.id} className="flex items-start gap-3 rounded-xl bg-white p-3 text-sm text-stone-700">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-100 text-xs font-semibold text-stone-600">{therapist.name.split(" ").map((n) => n[0]).join("").slice(0, 3)}</div>
+                    <Avatar
+                      src={therapist.photo_url ?? null}
+                      name={therapist.name}
+                      size="md"
+                    />
                     <div>
                       <p className="font-semibold text-slate-900">{therapist.name}</p>
                       {therapist.title && (<p className="text-xs text-stone-600">{therapist.title}</p>)}

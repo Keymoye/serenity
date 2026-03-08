@@ -4,7 +4,7 @@
  * No Supabase imports. No business logic.
  */
 
-export type UploadBucket = 'therapist-photos' | 'service-images' | 'spa-gallery' | 'spa-hero' | 'avatar-uploads';
+export type UploadBucket = 'therapist-photos' | 'service-images' | 'spa-hero' | 'avatar-uploads';
 
 export type UploadEntityType = 'therapist' | 'service';
 
@@ -27,7 +27,6 @@ export type UploadErrorCode =
 export const UPLOAD_BUCKETS: UploadBucket[] = [
   'therapist-photos',
   'service-images',
-  'spa-gallery',
   'spa-hero',
   'avatar-uploads',
 ];

@@ -1,4 +1,4 @@
-import type { Service } from "../../domain/service.types";
+import type { Service, ServiceImage, ServiceImageAddInput } from "../../domain/service.types";
 import { getSupabaseUserClient } from "./userClient";
 import { getSupabaseAdminClient } from "./adminClient";
 
@@ -15,16 +15,8 @@ export interface ServiceRepository {
     }>
   >;
   getPublicServiceDetail(serviceId: string): Promise<{
-    service: {
-      id: string;
-      name: string;
-      category: string | null;
-      duration_minutes: number | null;
-      price: number | null;
-      description: string | null;
-      thumbnail_url: string | null;
-    } | null;
-    images: Array<{ id: string; image_url: string; sort_order: number | null }>;
+    service: Service | null;
+    images: ServiceImage[];
     therapists: Array<{
       id: string;
       name: string;
@@ -34,12 +26,15 @@ export interface ServiceRepository {
     }>;
   }>;
   listTherapistsForService(serviceId: string): Promise<
-    Array<{ id: string; name: string; title: string | null; photo_url: string | null; is_active?: boolean | null }>
+    Array<{
+      id: string;
+      name: string;
+      title: string | null;
+      photo_url: string | null;
+      bio_short: string | null;
+    }>
   >;
   listServicesForTherapist(therapistId: string): Promise<
-    Array<{ id: string; name: string; category: string | null; duration_minutes: number | null; price: number | null; thumbnail_url: string | null }>
-  >;
-  listFeaturedServiceSummaries(): Promise<
     Array<{
       id: string;
       name: string;
@@ -50,6 +45,8 @@ export interface ServiceRepository {
     }>
   >;
   listAllServices(): Promise<Service[]>;
+  createService(payload: any): Promise<Service>;
+  updateService(id: string, payload: any): Promise<Service>;
   createService(payload: Omit<Service, "id" | "updated_at">): Promise<Service>;
   updateService(id: string, payload: Partial<Omit<Service, "id">>): Promise<Service>;
   deleteService(id: string): Promise<void>;
@@ -58,6 +55,10 @@ export interface ServiceRepository {
   assignTherapistsToService(serviceId: string, therapistIds: string[]): Promise<void>;
   listAllServicesAdmin(): Promise<Array<{ id: string; name: string; category: string | null }>>;
   listAllTherapistsAdmin(): Promise<Array<{ id: string; name: string; title: string | null }>>;
+  addServiceImage(input: ServiceImageAddInput): Promise<ServiceImage>;
+  deleteServiceImage(id: string): Promise<void>;
+  listServiceImages(serviceId: string): Promise<ServiceImage[]>;
+  listFeaturedServiceSummaries(): Promise<Service[]>;
 }
 
 export function createServiceRepository(): ServiceRepository {
@@ -91,7 +92,7 @@ export function createServiceRepository(): ServiceRepository {
     },
 
     async getPublicServiceDetail(serviceId: string) {
-      const supabase = await getSupabaseUserClient();
+      const supabase = await getSupabaseAdminClient();
 
       const { data: service, error: serviceError } = await supabase
         .from("services")
@@ -150,11 +151,11 @@ export function createServiceRepository(): ServiceRepository {
       const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("therapist_service")
-        .select("therapists(id, name, title, photo_url, is_active)")
+        .select("therapists(id, name, title, photo_url, bio_short, is_active)")
         .eq("service_id", serviceId);
       if (error) throw error;
 
-      type Therapist = { id: string; name: string; title: string | null; photo_url: string | null; is_active?: boolean | null };
+      type Therapist = { id: string; name: string; title: string | null; photo_url: string | null; bio_short: string | null; is_active?: boolean | null };
       type RawRow = { therapists: Therapist | null };
       const rows = (data ?? []) as unknown as RawRow[];
       return rows
@@ -335,6 +336,48 @@ export function createServiceRepository(): ServiceRepository {
 
       if (error) throw error;
       return data ?? [];
+    },
+
+    // Add a single image to service gallery
+    async addServiceImage(
+      input: ServiceImageAddInput
+    ): Promise<ServiceImage> {
+      const supabase = await getSupabaseAdminClient()
+      const { data, error } = await supabase
+        .from('service_images')
+        .insert({
+          service_id: input.service_id,
+          image_url: input.image_url,
+          sort_order: input.sort_order ?? null,
+        })
+        .select('id, service_id, image_url, sort_order')
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    // Delete a single image from service gallery
+    async deleteServiceImage(id: string): Promise<void> {
+      const supabase = await getSupabaseAdminClient()
+      const { error } = await supabase
+        .from('service_images')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+
+    // List all images for a service (admin use)
+    async listServiceImages(
+      serviceId: string
+    ): Promise<ServiceImage[]> {
+      const supabase = await getSupabaseAdminClient()
+      const { data, error } = await supabase
+        .from('service_images')
+        .select('id, service_id, image_url, sort_order')
+        .eq('service_id', serviceId)
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+      return data ?? []
     },
   };
 }

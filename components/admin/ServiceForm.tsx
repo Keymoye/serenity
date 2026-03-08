@@ -28,6 +28,16 @@ export default function ServiceForm({ initial, onSaved }: Props) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string>(initial?.thumbnail_url ?? "");
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
+  const [galleryImages, setGalleryImages] = 
+    useState<Array<{
+      id: string
+      image_url: string
+      sort_order: number | null
+    }>>([])
+  const [galleryLoading, setGalleryLoading] = 
+    useState(false)
+  const [uploadingGallery, setUploadingGallery] = 
+    useState(false)
   const [error, setError] = useState<string | null>(null);
   const [allTherapists, setAllTherapists] = useState<
     Array<{ id: string; name: string; title: string | null }>
@@ -65,6 +75,16 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     load();
   }, [initial?.id]);
 
+  useEffect(() => {
+    if (!initial?.id) return
+    setGalleryLoading(true)
+    fetch(`/api/admin/services/${initial.id}/images`)
+      .then((r) => r.json())
+      .then((data) => setGalleryImages(data.images ?? []))
+      .catch(console.error)
+      .finally(() => setGalleryLoading(false))
+  }, [initial?.id])
+
   function toggleTherapist(therapistId: string) {
     setSelectedTherapistIds((prev) =>
       prev.includes(therapistId)
@@ -97,6 +117,57 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     }
   };
 
+  async function handleGalleryUpload(url: string) {
+    if (!url || !initial?.id) return
+    setUploadingGallery(true)
+    try {
+      const res = await fetch(
+        `/api/admin/services/${initial.id}/images`,
+        {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            image_url: url,
+            sort_order: galleryImages.length,
+          }),
+        }
+      )
+      const data = await res.json()
+      if (data.image) {
+        setGalleryImages((prev) => [...prev, data.image])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setUploadingGallery(false)
+    }
+  }
+
+  async function handleGalleryDelete(
+    imageId: string
+  ) {
+    if (!initial?.id) return
+    try {
+      await fetch(
+        `/api/admin/services/${initial.id}/images`,
+        {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({ image_id: imageId }),
+        }
+      )
+      setGalleryImages((prev) => 
+        prev.filter((img) => img.id !== imageId)
+      )
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return (
     <form onSubmit={submit} className="space-y-3">
       {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
@@ -117,6 +188,96 @@ export default function ServiceForm({ initial, onSaved }: Props) {
           label="Service image"
           aspectRatio="landscape"
         />
+      </div>
+
+      {/* Gallery images */}
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium
+                        text-stone-700">
+            Gallery images
+          </label>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Multiple images shown on the service
+            detail page
+          </p>
+        </div>
+
+        {!initial?.id ? (
+          <p className="text-xs text-stone-400
+                    bg-stone-50 rounded-xl p-3">
+            Save the service first to add
+            gallery images.
+          </p>
+        ) : galleryLoading ? (
+          <div className="h-20 bg-stone-50
+                      rounded-xl animate-pulse" />
+        ) : (
+          <div className="space-y-3">
+            {/* Existing gallery images */}
+            {galleryImages.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {galleryImages.map((img) => (
+                  <div key={img.id}
+                       className="relative aspect-square
+                                      overflow-hidden rounded-xl
+                                      bg-stone-100 group">
+                    <img
+                      src={img.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleGalleryDelete(img.id)
+                      }
+                      className="absolute top-1 right-1
+                                 bg-white/90 hover:bg-red-50
+                                 text-stone-500
+                                 hover:text-red-600
+                                 rounded-full p-1
+                                 opacity-0 group-hover:opacity-100
+                                 transition-all shadow-sm
+                                 border border-stone-200"
+                    >
+                      <svg width="12" height="12"
+                           viewBox="0 0 24 24"
+                           fill="none"
+                           stroke="currentColor"
+                           strokeWidth="2.5"
+                           strokeLinecap="round">
+                        <line x1="18" y1="6"
+                              x2="6" y2="18"/>
+                        <line x1="6" y1="6"
+                              x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload new gallery image */}
+            {galleryImages.length < 8 && (
+              <ImageUpload
+                currentUrl={null}
+                bucket="service-images"
+                entityId={`gallery-${initial.id}-${Date.now()}`}
+                onUpload={handleGalleryUpload}
+                aspectRatio="landscape"
+                disabled={uploadingGallery}
+                label="Add gallery image"
+              />
+            )}
+
+            {galleryImages.length >= 8 && (
+              <p className="text-xs text-stone-400">
+                Maximum 8 gallery images reached.
+              </p>
+            )}
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
