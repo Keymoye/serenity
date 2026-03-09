@@ -32,7 +32,6 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     []
   );
   const [loadingServices, setLoadingServices] = useState(false);
-  const [showForm, setShowForm] = useState(true);
 
   useEffect(() => {
     async function load() {

@@ -5,6 +5,7 @@ import { getPublicServiceDetail } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { Avatar } from "@/components/ui/Avatar";
+import Image from "next/image";
 import type { Service, ServiceImage, TherapistSummary } from "@/lib/domain/service.types";
 import type { Metadata } from "next";
 
@@ -93,11 +94,15 @@ export default async function ServiceDetailPage({
               <div className="grid gap-3 sm:grid-cols-3">
                 {images.map((img) => (
                   <div key={img.id} className="aspect-[4/3] overflow-hidden rounded-xl bg-stone-100">
-                    <img
-                      src={img.image_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={img.image_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

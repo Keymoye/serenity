@@ -1,7 +1,6 @@
 // tests/api.admin.bookings.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "@/app/api/admin/bookings/route";
-import { NextResponse } from "next/server";
 
 vi.mock("@/lib/infra/supabase/currentUser", () => {
   return { getCurrentUser: vi.fn() };

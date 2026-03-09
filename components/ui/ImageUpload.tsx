@@ -40,7 +40,7 @@ export function ImageUpload({
       setError("Image must be under 2MB.");
       return;
     }
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif")) {
       setError("Please upload a JPEG, PNG, WebP, or GIF.");
       return;
     }
@@ -55,8 +55,8 @@ export function ImageUpload({
       const data = await uploadWithProgress(formData);
       setPreview(data.url);
       onUpload(data.url);
-    } catch (err: any) {
-      setError(err.message || "Upload error");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Upload error");
     } finally {
       setLoading(false);
       setProgress(0);

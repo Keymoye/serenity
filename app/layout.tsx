@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { requireCurrentUser } from "@/lib/services/authService";

@@ -52,7 +52,15 @@ export function createMessageRepository(): MessageRepository {
         .select("id, full_name, email, subject, message, is_read, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as any;
+      return (data ?? []) as Array<{
+        id: string;
+        full_name: string;
+        email: string;
+        subject: string;
+        message: string;
+        is_read: boolean;
+        created_at: string;
+      }>;
     },
 
     async setMessageRead(messageId, isRead) {

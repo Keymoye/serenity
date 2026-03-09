@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { adminTherapistSchema, type AdminTherapistInput } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
-import { useRouter } from "next/navigation";
 import TherapistForm from "@/components/admin/TherapistForm";
+import Image from "next/image";
 
 type TherapistRow = {
   id: string;
@@ -17,19 +16,9 @@ type TherapistRow = {
   created_at: string | null;
 };
 
-const INITIAL_FORM: AdminTherapistInput = {
-  name: "",
-  title: "",
-  photo_url: "",
-  bio_short: "",
-  is_active: true,
-};
-
 export default function AdminTherapistsPage() {
-  const router = useRouter();
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<{ values: AdminTherapistInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
   const [editingTherapist, setEditingTherapist] = useState<TherapistRow | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -52,43 +41,6 @@ export default function AdminTherapistsPage() {
   const handleToggleActive = async (t: TherapistRow) => {
     // Local-only toggle: update UI without calling server (no-op on backend)
     setTherapists((prev) => prev.map((p) => (p.id === t.id ? { ...p, is_active: !p.is_active } : p)));
-  };
-
-
-
-  const handleChange = (field: keyof AdminTherapistInput) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setForm((prev) => ({ ...prev, values: { ...(prev.values as Record<string, unknown>), [field]: value } as AdminTherapistInput }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForm((prev) => ({ ...prev, error: null, isSubmitting: true }));
-    const parsed = adminTherapistSchema.safeParse(form.values);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setForm((prev) => ({ ...prev, error: firstError, isSubmitting: false }));
-      return;
-    }
-
-    try {
-      await apiFetch("/api/admin/therapists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: parsed.data.name,
-          title: parsed.data.title || null,
-          photo_url: parsed.data.photo_url || null,
-          bio_short: parsed.data.bio_short || null,
-          is_active: parsed.data.is_active ?? true,
-        }),
-      });
-      setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
-      await loadTherapists();
-    } catch (err) {
-      logger.error("Unexpected error creating therapist", err);
-      setForm((prev) => ({ ...prev, error: "Something went wrong.", isSubmitting: false }));
-    }
   };
 
   return (
@@ -143,12 +95,15 @@ export default function AdminTherapistsPage() {
                   <tr key={t.id}>
                     <td className="px-4 py-3">
                       {t.photo_url ? (
-                        <img
-                          src={t.photo_url}
-                          alt={t.name}
-                          className="h-10 w-10 rounded-full 
-                                     object-cover"
-                        />
+                        <div className="relative h-10 w-10">
+                          <Image
+                            src={t.photo_url}
+                            alt={t.name}
+                            fill
+                            className="object-cover rounded-full"
+                            style={{ objectFit: 'cover' }}
+                          />
+                        </div>
                       ) : (
                         <div className="h-10 w-10 rounded-full 
                                         bg-stone-100 flex items-center 
@@ -233,10 +188,11 @@ export default function AdminTherapistsPage() {
             </div>
             <TherapistForm
               initial={editingTherapist ? {
+                id: editingTherapist.id,
                 name: editingTherapist.name,
-                title: editingTherapist.title ?? undefined,
-                photo_url: editingTherapist.photo_url ?? undefined,
-                bio_short: editingTherapist.bio_short ?? undefined,
+                title: editingTherapist.title ?? "",
+                photo_url: editingTherapist.photo_url ?? "",
+                bio_short: editingTherapist.bio_short ?? "",
                 is_active: editingTherapist.is_active ?? true
               } : undefined}
               onSaved={() => {

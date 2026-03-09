@@ -7,7 +7,7 @@ import {
   ValidationError,
 } from "../domain/errors";
 import { logger } from "@/lib/utils/logger";
-import { LOCK_TIMEOUT_MS, LATE_CANCELLATION_HOURS, MIN_PASSWORD_LENGTH, BOOKING_STATUS } from "../config/constants";
+import { LOCK_TIMEOUT_MS, LATE_CANCELLATION_HOURS } from "../config/constants";
 import {
   sendBookingConfirmation,
   sendAdminNewBookingNotification,
@@ -191,7 +191,7 @@ export async function confirmBooking(
   try {
     const svc = await deps.serviceRepo.getPublicServiceDetail(payload.serviceId);
     if (svc && svc.service) serviceName = svc.service.name;
-  } catch (_) {}
+  } catch (_err) {}
 
   let therapistName: string | null = null;
   try {
@@ -199,15 +199,15 @@ export async function confirmBooking(
       const th = await deps.therapistRepo.findById(payload.therapistId);
       if (th) therapistName = th.name;
     }
-  } catch (_) {}
+  } catch (_err) {}
 
   let slotStartTime = "";
   try {
     const slot = await deps.timeSlotRepo.findById(payload.timeSlotId);
     if (slot) slotStartTime = slot.start_time;
-  } catch (_) {}
+  } catch (_err) {}
 
-  let customerEmail = "";
+  const customerEmail = "";
   let customerName = "Valued Customer";
   try {
     const profile = await deps.profileRepo.findById(context.userId);
@@ -215,7 +215,7 @@ export async function confirmBooking(
       customerName = profile.name ?? "Valued Customer";
       // email not stored on profile; leave empty string
     }
-  } catch (_) {}
+  } catch (_err) {}
 
   // Atomic gate: only one confirmation can flip availability from true->false.
   let marked = false;
@@ -390,7 +390,7 @@ export async function cancelBooking(
   try {
     const svc = await deps.serviceRepo.getPublicServiceDetail(booking.service_id);
     if (svc && svc.service) serviceName = svc.service.name;
-  } catch (_) {}
+  } catch (_err) {}
 
   let therapistName: string | null = null;
   try {
@@ -398,15 +398,15 @@ export async function cancelBooking(
       const th = await deps.therapistRepo.findById(booking.therapist_id);
       if (th) therapistName = th.name;
     }
-  } catch (_) {}
+  } catch (_err) {}
 
   let slotStartTime = "";
   try {
     const slot = await deps.timeSlotRepo.findById(booking.time_slot_id);
     if (slot) slotStartTime = slot.start_time;
-  } catch (_) {}
+  } catch (_err) {}
 
-  let customerEmail = "";
+  const customerEmail = "";
   let customerName = "Valued Customer";
   try {
     const profile = await deps.profileRepo.findById(context.userId);
@@ -414,7 +414,7 @@ export async function cancelBooking(
       customerName = profile.name ?? "Valued Customer";
       // email not stored on profile; leave blank
     }
-  } catch (_) {}
+  } catch (_err) {}
 
   // always send cancellation confirmation
   const cancelEmailResult = await sendCancellationConfirmation({

@@ -12,7 +12,7 @@ export async function requireCurrentUser() {
   try {
     const current = await getServerCurrentUser();
     return current ?? null;
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }

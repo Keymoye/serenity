@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif")) {
       return NextResponse.json(
         {
           error: "Invalid file type. Allowed: JPEG, PNG, WebP, GIF",
@@ -101,7 +101,6 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const correlationId = randomUUID()
   try {
     // Auth + admin check (same pattern as POST)
     const current = await requireAdmin()

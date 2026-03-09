@@ -1,6 +1,5 @@
-import { getPublicServiceDetail, getTherapistDetail } from "@/lib/application/service.service";
+import { getTherapistDetail } from "@/lib/application/service.service";
 import { logger } from "@/lib/utils/logger";
-import Image from "next/image";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { PageHero } from "@/components/layout/PageHero";
 import type { Metadata } from "next";

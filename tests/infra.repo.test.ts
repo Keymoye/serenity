@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // helper builder for fake supabase chain
-function makeChain(result: any = { data: null, error: null }) {
-  const chain: any = {};
+function makeChain(result: unknown = { data: null, error: null }) {
+  const chain: Record<string, unknown> = {};
   const methods = ["from", "select", "eq", "or", "update", "insert", "maybeSingle", "single", "order", "limit", "delete"];
   methods.forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(chain);
@@ -18,7 +18,6 @@ function makeChain(result: any = { data: null, error: null }) {
 vi.mock("@/lib/infra/supabase/userClient");
 vi.mock("@/lib/infra/supabase/adminClient");
 
-import { getSupabaseUserClient } from "@/lib/infra/supabase/userClient";
 import { getSupabaseAdminClient } from "@/lib/infra/supabase/adminClient";
 import { createTimeSlotRepository } from "@/lib/infra/supabase/timeSlot.repo";
 import { createBookingRepository } from "@/lib/infra/supabase/booking.repo";
@@ -32,7 +31,7 @@ describe("infrastructure repositories - query composition", () => {
   it("timeSlotRepo.lockSlot calls try_lock_slot rpc", async () => {
   const fake = makeChain({ data: null, error: null });
   fake.rpc = vi.fn().mockResolvedValue({ data: true, error: null });
-  (getSupabaseAdminClient as any).mockResolvedValue(fake);
+  (getSupabaseAdminClient as unknown).mockResolvedValue(fake);
   const repo = createTimeSlotRepository();
 
   const res = await repo.lockSlot("ts1", "lockUntil", "nowIso");
@@ -47,7 +46,7 @@ describe("infrastructure repositories - query composition", () => {
 
   it("timeSlotRepo.tryMarkAsBooked updates only available slot", async () => {
     const fake = makeChain({ data: [{ id: "1" }], error: null });
-    (getSupabaseAdminClient as any).mockResolvedValue(fake);
+    (getSupabaseAdminClient as unknown).mockResolvedValue(fake);
     const repo = createTimeSlotRepository();
 
     const success = await repo.tryMarkAsBooked("ts1");
@@ -60,10 +59,10 @@ describe("infrastructure repositories - query composition", () => {
 
   it("bookingRepo.createBooking inserts record and selects single", async () => {
     const fake = makeChain({ data: { id: "b1" }, error: null });
-    (getSupabaseAdminClient as any).mockResolvedValue(fake);
+    (getSupabaseAdminClient as unknown).mockResolvedValue(fake);
     const repo = createBookingRepository();
 
-    const booking = await repo.createBooking({ customer_id: "c1" } as any);
+    const booking = await repo.createBooking({ customer_id: "c1" } as unknown);
     expect(booking).toEqual({ id: "b1" });
     expect(fake.from).toHaveBeenCalledWith("bookings");
     expect(fake.insert).toHaveBeenCalledWith({ customer_id: "c1" });
@@ -73,7 +72,7 @@ describe("infrastructure repositories - query composition", () => {
 
   it("serviceRepo.isTherapistAssignedToService queries join table", async () => {
     const fake = makeChain({ data: { id: "row" }, error: null });
-    (getSupabaseAdminClient as any).mockResolvedValue(fake);
+    (getSupabaseAdminClient as unknown).mockResolvedValue(fake);
     const repo = createServiceRepository();
 
     const assigned = await repo.isTherapistAssignedToService("svc", "ther");

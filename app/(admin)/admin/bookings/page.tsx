@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { BookingSummary, BookingStatus } from "@/lib/domain/booking.types";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
 import { pushToast } from "@/components/ui/Toast";
 

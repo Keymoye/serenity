@@ -10,7 +10,7 @@ export async function GET() {
   const log = logger.withContext({ correlationId, route: 'admin.settings.GET' })
 
   try {
-    const current = await requireAdmin()
+    await requireAdmin()
 
     const settings = await getPublicSiteSettings()
     return NextResponse.json({ settings })
@@ -26,7 +26,7 @@ export async function PUT(request: NextRequest) {
   const log = logger.withContext({ correlationId, route: 'admin.settings.PUT' })
 
   try {
-    const current = await requireAdmin()
+    await requireAdmin()
 
     const body = await request.json()
 

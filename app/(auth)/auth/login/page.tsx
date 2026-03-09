@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
 import { loginSchema } from "@/lib/utils/validation";
 import type { LoginInput } from "@/lib/utils/validation";
 import { postJson, useApi } from "@/lib/utils/api";
@@ -17,7 +16,6 @@ const INITIAL_VALUES: LoginInput = {
 };
 
 function LoginContent() {
-  const router = useRouter();
   const { loading, error, call, setError } = useApi();
   
   // Tab state
@@ -95,7 +93,7 @@ function LoginContent() {
             sessionStorage.removeItem("pendingServiceId");
             redirectPath = `/book?serviceId=${pendingId}`;
           }
-        } catch (_) {
+        } catch {
           // sessionStorage unavailable
         }
       }

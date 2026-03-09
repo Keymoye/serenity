@@ -8,6 +8,7 @@ import { logger } from "@/lib/utils/logger";
 import type { AdminServiceInput } from "@/lib/utils/validation";
 import { adminServiceSchema } from "@/lib/utils/validation";
 import { MAX_GALLERY_IMAGES } from "@/lib/config/constants";
+import Image from "next/image";
 
 type ServiceFormInput = AdminServiceInput & { id?: string };
 
@@ -272,11 +273,15 @@ export default function ServiceForm({ initial, onSaved }: Props) {
                        className="relative aspect-square
                                       overflow-hidden rounded-xl
                                       bg-stone-100 group">
-                    <img
-                      src={img.image_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={img.image_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() =>

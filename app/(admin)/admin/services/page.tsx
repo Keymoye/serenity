@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
 import ServiceForm from "@/components/admin/ServiceForm";
+import Image from "next/image";
 
 type ServiceRow = {
   id: string;
@@ -132,12 +133,15 @@ export default function AdminServicesPage() {
                   <tr key={service.id}>
                     <td className="px-4 py-3">
                       {service.first_image_url ? (
-                        <img
-                          src={service.first_image_url}
-                          alt={service.name}
-                          className="h-10 w-10 rounded-lg 
-                                     object-cover"
-                        />
+                        <div className="relative h-10 w-10">
+                          <Image
+                            src={service.first_image_url}
+                            alt={service.name}
+                            fill
+                            className="object-cover rounded-lg"
+                            style={{ objectFit: 'cover' }}
+                          />
+                        </div>
                       ) : (
                         <div className="h-10 w-10 rounded-lg 
                                         bg-stone-100 flex items-center 

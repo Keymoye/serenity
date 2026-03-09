@@ -1,9 +1,8 @@
 // tests/api.booking.test.ts
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST as availabilityPOST } from "@/app/api/booking/availability/route";
 import { POST as lockPOST } from "@/app/api/booking/lock/route";
 import { POST as confirmPOST } from "@/app/api/booking/confirm/route";
-import { NextResponse } from "next/server";
 import { ValidationError, ConflictError } from "@/lib/domain/errors";
 
 // mocks
@@ -22,7 +21,7 @@ vi.mock("@/lib/application/booking.service", () => {
 import { getCurrentUser } from "@/lib/infra/supabase/currentUser";
 import { getAvailability, lockSlot, confirmBooking } from "@/lib/application/booking.service";
 
-function makeRequest(body: any) {
+function makeRequest(body: unknown) {
   return new Request("http://localhost", {
     method: "POST",
     headers: { "content-type": "application/json" },

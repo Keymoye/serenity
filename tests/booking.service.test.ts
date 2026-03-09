@@ -5,9 +5,10 @@ import {
   listCustomerBookings,
   lockSlot,
 } from "@/lib/application/booking.service";
+import type { BookingDependencies } from "@/lib/application/booking.service";
 import { ConflictError, ValidationError } from "@/lib/domain/errors";
 
-function createDeps(overrides: Partial<any> = {}): any {
+function createDeps(overrides: Partial<BookingDependencies> = {}): BookingDependencies {
   return {
     timeSlotRepo: {
       findForTherapistOnDate: vi.fn().mockResolvedValue([]),

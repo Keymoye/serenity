@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import type { TimeSlot } from "@/lib/domain/timeSlot.types";
 import type { Therapist } from "@/lib/domain/therapist.types";
 
@@ -31,11 +31,6 @@ function colorForTherapist(id: string): string {
 
 export function ScheduleViewer({ slots, therapists }: ScheduleViewerProps) {
   const [filter, setFilter] = useState<string>("all");
-  const [today, setToday] = useState<string | null>(null);
-
-  useEffect(() => {
-    setToday(new Date().toLocaleDateString());
-  }, []);
 
   const therapistMap = useMemo(() => {
     const m: Record<string, Therapist> = {};
@@ -103,9 +98,6 @@ export function ScheduleViewer({ slots, therapists }: ScheduleViewerProps) {
                   minute: "2-digit",
                 });
                 const therapist = therapistMap[s.therapist_id];
-                const todayIso = today ? new Date(today).toISOString().slice(0,10) : '';
-                const iso = s.start_time.split('T')[0];
-                const disabled = iso < todayIso;
                 return (
                   <li
                     key={s.id}

@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export type ServiceSummary = {
   id: string;
   name: string;
@@ -23,11 +25,15 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
     >
       <div className="relative h-40 w-full bg-slate-100">
         {first_image_url ? (
-          <img
-            src={first_image_url}
-            alt={name}
-            className="w-full h-full object-cover"
-          />
+          <div className="relative w-full h-full">
+            <Image
+              src={first_image_url}
+              alt={name}
+              fill
+              className="object-cover"
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
         ) : (
           <div 
             className="flex h-full w-full items-center justify-center text-xs text-slate-400"
