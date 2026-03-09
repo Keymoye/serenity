@@ -38,3 +38,11 @@ export interface ServiceImageDeleteInput {
   service_id: string
 }
 
+export type TherapistSummary = {
+  id: string
+  name: string
+  title: string | null
+  photo_url: string | null
+  bio_short: string | null
+}
+

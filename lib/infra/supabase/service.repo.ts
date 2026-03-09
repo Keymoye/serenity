@@ -33,6 +33,7 @@ export interface ServiceRepository {
       title: string | null;
       photo_url: string | null;
       bio_short: string | null;
+      is_active?: boolean | null;
     }>
   >;
   listServicesForTherapist(therapistId: string): Promise<

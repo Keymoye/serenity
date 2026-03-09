@@ -16,7 +16,7 @@ export default async function TherapistPage({ params }: TherapistPageProps) {
     logger.error("failed loading therapist detail", error);
   }
 
-  if (!detail) {
+  if (!detail || !detail.therapist) {
     return <p className="text-center text-sm text-red-600">Therapist not found.</p>;
   }
 

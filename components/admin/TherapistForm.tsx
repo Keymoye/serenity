@@ -4,21 +4,12 @@ import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { logger } from "@/lib/utils/logger";
+import type { AdminTherapistInput } from "@/lib/utils/validation";
 
-import type { AdminTherapistInput } from "@/lib/domain/admin.types";
-
-type TherapistInput = {
-  id?: string;
-  name?: string;
-  title?: string | null;
-  photo_url?: string | null;
-  bio?: string | null;
-  is_active?: boolean | null;
-  [key: string]: unknown;
-};
+type TherapistFormInput = AdminTherapistInput & { id?: string };
 
 type Props = {
-  initial?: Partial<AdminTherapistInput> | null | undefined;
+  initial?: TherapistFormInput | null;
   onSaved?: () => void;
 };
 
@@ -27,7 +18,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [photoUrl, setPhotoUrl] = useState(initial?.photo_url ?? "");
   // entityId is either existing therapist id or a temporary string
-  const entityId = (initial as TherapistInput)?.id ?? "new";
+  const entityId = initial?.id ?? "new";
   const [bio, setBio] = useState(initial?.bio_short ?? "");
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
@@ -39,6 +30,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     []
   );
   const [loadingServices, setLoadingServices] = useState(false);
+  const [showForm, setShowForm] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -48,27 +40,28 @@ export default function TherapistForm({ initial, onSaved }: Props) {
         const res = await fetch(
           '/api/admin/therapists?forAssignment=true'
         );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setAllServices(data.services ?? []);
 
         // If editing, load current assignments
-        if ((initial as TherapistInput)?.id) {
+        if (initial?.id) {
           const assignRes = await fetch(
-            `/api/therapists/${(initial as TherapistInput).id}`
+            `/api/therapists/${initial.id}`
           );
           const assignData = await assignRes.json();
           const currentIds = (assignData.services ?? [])
             .map((s: { id: string }) => s.id);
           setSelectedServiceIds(currentIds);
         }
-      } catch {
-        // silently fail — assignments are not critical
+      } catch (err) {
+        logger.error("Failed to load services for therapist form", err);
       } finally {
         setLoadingServices(false);
       }
     }
     load();
-  }, [(initial as TherapistInput)?.id]);
+  }, [initial?.id]);
 
   function toggleService(serviceId: string) {
     setSelectedServiceIds((prev) =>
@@ -83,15 +76,15 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const payload = { name, title, photo_url: photoUrl, bio, is_active: Boolean(isActive), serviceIds: selectedServiceIds };
-      if ((initial as TherapistInput)?.id) {
+      const payload = { name, title, photo_url: photoUrl, bio_short: bio, is_active: Boolean(isActive), serviceIds: selectedServiceIds };
+      if (initial?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: (initial as TherapistInput).id, ...payload, bio_short: bio }),
+          body: JSON.stringify({ id: initial.id, ...payload }),
         });
       } else {
-        await postJson(`/api/admin/therapists`, { ...payload, bio_short: bio });
+        await postJson(`/api/admin/therapists`, payload);
       }
       // Call parent callback to refresh list or close modal
       onSaved?.();

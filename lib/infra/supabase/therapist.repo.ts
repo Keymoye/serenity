@@ -45,7 +45,13 @@ export function createTherapistRepository(): TherapistRepository {
         .eq("is_active", true)
         .order("name", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as any;
+      return (data ?? []) as Array<{
+        id: string;
+        name: string;
+        title: string | null;
+        photo_url: string | null;
+        bio_short: string | null;
+      }>;
     },
 
     async createTherapist(

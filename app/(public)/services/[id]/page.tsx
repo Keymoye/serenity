@@ -5,48 +5,25 @@ import { getPublicServiceDetail } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { Avatar } from "@/components/ui/Avatar";
+import type { Service, ServiceImage, TherapistSummary } from "@/lib/domain/service.types";
 
 type ServiceDetailPageProps = {
   params: { id: string };
 };
 
-type ServiceDetail = {
-  id: string;
-  name: string;
-  category: string | null;
-  duration_minutes: number | null;
-  price: number | null;
-  description: string | null;
-  thumbnail_url: string | null;
-};
-
-type ServiceImage = {
-  id: string;
-  image_url: string;
-  sort_order: number | null;
-};
-
-type Therapist = {
-  id: string;
-  name: string;
-  title: string | null;
-  photo_url: string | null;
-  bio_short: string | null;
-};
-
 async function getServiceDetail(
   id: string
 ): Promise<{
-  service: ServiceDetail | null;
+  service: Service | null;
   images: ServiceImage[];
-  therapists: Therapist[];
+  therapists: TherapistSummary[];
 }> {
   try {
     const result = await getPublicServiceDetail({ id });
     return {
-      service: result.service as unknown as ServiceDetail | null,
-      images: result.images as unknown as ServiceImage[],
-      therapists: result.therapists as unknown as Therapist[],
+      service: result.service,
+      images: result.images,
+      therapists: result.therapists,
     };
   } catch (error) {
     logger.error("Unexpected error while loading service detail", error, { id });

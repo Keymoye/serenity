@@ -25,7 +25,8 @@ async function getCustomerBookings(profileId: string, userId: string): Promise<B
       userId: userId ?? undefined,
       customerProfileId: profileId,
     });
-    return (rows ?? []) as unknown as BookingRow[];
+    // shape verified against listCustomerBookingRows query in booking.repo.ts
+    return (rows ?? []) as BookingRow[];
   } catch (error) {
     logger.error("Unexpected error while loading customer bookings", error, {
       profileId,

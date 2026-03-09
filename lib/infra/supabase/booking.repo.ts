@@ -128,7 +128,15 @@ export function createBookingRepository(): BookingRepository {
         .order("created_at", { ascending: false })
         .limit(50); // shows most recent 50 bookings per customer
       if (error) throw error;
-      return (data ?? []) as any;
+      return (data ?? []) as Array<{
+        id: string;
+        status: string;
+        reference_code: string | null;
+        notes: string | null;
+        time_slots: { start_time: string }[] | null;
+        services: { name: string }[] | null;
+        therapists: { name: string }[] | null;
+      }>;
     },
 
     async findBookingIdByTimeSlotId(timeSlotId: string) {

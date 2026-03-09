@@ -232,6 +232,9 @@ export default function AdminServicesPage() {
             <ServiceForm
               initial={editingService ? {
                 ...editingService,
+                duration_minutes: editingService.duration_minutes ?? 0,
+                price: editingService.price ?? 0,
+                category: editingService.category ?? undefined,
                 is_active: editingService.is_active ?? true
               } : undefined}
               onSaved={() => {

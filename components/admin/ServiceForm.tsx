@@ -5,19 +5,12 @@ import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { logger } from "@/lib/utils/logger";
+import type { AdminServiceInput } from "@/lib/utils/validation";
 
-type ServiceInput = {
-  id?: string;
-  name?: string;
-  category?: string | null;
-  duration_minutes?: number | null;
-  price?: number | null;
-  is_active?: boolean;
-  description?: string | null;
-};
+type ServiceFormInput = AdminServiceInput & { id?: string };
 
 type Props = {
-  initial?: ServiceInput | null;
+  initial?: ServiceFormInput | null;
   onSaved?: () => void;
 };
 
