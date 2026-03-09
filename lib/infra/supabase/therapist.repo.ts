@@ -1,6 +1,7 @@
 import type { Therapist } from "../../domain/therapist.types";
 import { getSupabaseUserClient } from "./userClient";
 import { getSupabaseAdminClient } from "./adminClient";
+import { ADMIN_LIST_LIMIT } from "../../config/constants";
 
 export interface TherapistRepository {
   listTherapists(): Promise<Therapist[]>;
@@ -32,7 +33,7 @@ export function createTherapistRepository(): TherapistRepository {
         .from("therapists")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(200); // reasonable ceiling for spa
+        .limit(ADMIN_LIST_LIMIT); // reasonable ceiling for spa
       if (error) throw error;
       return (data ?? []) as Therapist[];
     },

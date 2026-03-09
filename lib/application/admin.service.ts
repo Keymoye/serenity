@@ -272,6 +272,14 @@ export type AdminMetrics = {
   bookingsLast7Days: Array<{ date: string; count: number }>;
 };
 
+/**
+ * Fetches dashboard metrics for the admin panel.
+ * Runs all DB queries in parallel for performance.
+ *
+ * @returns bookingsThisMonth, upcomingToday,
+ *   unreadMessages, bookingsLast7Days chart data
+ * @throws UnauthorizedError if not admin context
+ */
 export async function getAdminMetrics(
   context: AdminContext,
   deps: AdminDependencies = createDefaultDeps(),

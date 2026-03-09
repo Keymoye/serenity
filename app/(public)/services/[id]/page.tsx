@@ -6,6 +6,7 @@ import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Service, ServiceImage, TherapistSummary } from "@/lib/domain/service.types";
+import type { Metadata } from "next";
 
 type ServiceDetailPageProps = {
   params: { id: string };
@@ -28,6 +29,25 @@ async function getServiceDetail(
   } catch (error) {
     logger.error("Unexpected error while loading service detail", error, { id });
     return { service: null, images: [], therapists: [] };
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string }
+}): Promise<Metadata> {
+  const { id } = await params;
+  const detail = await getServiceDetail(id);
+  if (!detail?.service) {
+    return {
+      title: "Service — Serenity Spa",
+    }
+  }
+  return {
+    title: `${detail.service.name} — Serenity Spa`,
+    description: detail.service.description
+      ?? `Book ${detail.service.name} at Serenity Spa.`,
   }
 }
 

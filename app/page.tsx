@@ -6,6 +6,12 @@ import { listPublicServices } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Serenity Spa — Relax, Restore, Rejuvenate",
+  description: "Book spa treatments, massages, and wellness services online. Browse our therapists and services.",
+};
 
 async function getFeaturedServices(): Promise<ServiceSummary[]> {
   try {

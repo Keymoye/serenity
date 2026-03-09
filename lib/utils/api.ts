@@ -16,11 +16,14 @@ export interface ApiError extends Error {
 }
 
 /**
- * Perform a fetch and parse JSON response. Throws on non-2xx status.
+ * Typed fetch wrapper for API calls.
+ * Throws an error with parsed body on
+ * non-2xx responses.
  *
- * @param input URL or Request
- * @param init RequestInit options
- * @returns parsed response body
+ * @param url - API endpoint path
+ * @param options - Standard fetch options
+ * @returns Parsed JSON response typed as T
+ * @throws Error with response body on failure
  */
 export async function apiFetch<T = unknown>(
   input: RequestInfo,

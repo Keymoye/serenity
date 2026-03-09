@@ -7,6 +7,7 @@ import {
   ValidationError,
 } from "../domain/errors";
 import { logger } from "@/lib/utils/logger";
+import { LOCK_TIMEOUT_MS, LATE_CANCELLATION_HOURS, MIN_PASSWORD_LENGTH, BOOKING_STATUS } from "../config/constants";
 import {
   sendBookingConfirmation,
   sendAdminNewBookingNotification,
@@ -50,6 +51,18 @@ function createDefaultDeps(): BookingDependencies {
   };
 }
 
+/**
+ * Returns available time slots for a given
+ * therapist and service on a specific date.
+ *
+ * Filters out:
+ * - Already booked slots
+ * - Locked slots (within lock window)
+ * - Past slots
+ *
+ * @param input - therapistId, serviceId, date
+ * @returns Array of available TimeSlot objects
+ */
 export async function getAvailability(
   {
     serviceId,
@@ -125,7 +138,7 @@ export async function lockSlot(
     throw new ValidationError("Missing timeSlotId", { timeSlotId });
   }
 
-  const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const lockUntil = new Date(Date.now() + LOCK_TIMEOUT_MS).toISOString();
   const nowIso = new Date().toISOString();
 
   const locked = await deps.timeSlotRepo.lockSlot(timeSlotId, lockUntil, nowIso);
@@ -146,6 +159,22 @@ function generateReferenceCode() {
   return `SS-${yyyy}${mm}${dd}-${rand}`;
 }
 
+/**
+ * Confirms a booking by atomically marking
+ * the time slot as booked and creating the
+ * booking record.
+ *
+ * Uses an optimistic lock pattern:
+ * 1. Atomically flips slot availability
+ *    (prevents double booking)
+ * 2. Creates booking record
+ * 3. On insert failure, attempts to reopen
+ *    the slot (best-effort rollback)
+ * 4. Sends confirmation email
+ *
+ * @throws ConflictError if slot already booked
+ * @throws InternalError if DB write fails
+ */
 export async function confirmBooking(
   payload: BookingConfirmInput,
   context: BookingContext,
@@ -294,6 +323,16 @@ export async function listCustomerBookings(
   }
 }
 
+/**
+ * Cancels a confirmed booking.
+ * Reopens the associated time slot so it
+ * can be booked again.
+ *
+ * @throws NotFoundError if booking not found
+ * @throws ConflictError if already cancelled
+ * @throws ForbiddenError if cancellation is
+ *   within LATE_CANCELLATION_HOURS
+ */
 export async function cancelBooking(
   { bookingId }: { bookingId: string },
   context: BookingContext,
@@ -400,7 +439,7 @@ export async function cancelBooking(
     const hoursUntil =
       (new Date(slotStartTime).getTime() - Date.now()) / (1000 * 60 * 60);
 
-    if (hoursUntil >= 0 && hoursUntil < 24) {
+    if (hoursUntil >= 0 && hoursUntil < LATE_CANCELLATION_HOURS) {
       const alertResult = await sendAdminLateCancellationAlert({
         referenceCode: cancelled.reference_code,
         customerName,

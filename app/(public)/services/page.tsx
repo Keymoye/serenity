@@ -3,6 +3,12 @@ import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import Link from "next/link";
 import { listPublicServices } from "@/lib/application/service.service";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Services — Serenity Spa",
+  description: "Explore our full catalog of spa treatments, massages, facials, and wellness services.",
+};
 
 type ServicesPageProps = {
   searchParams: {

@@ -3,8 +3,26 @@ import { logger } from "@/lib/utils/logger";
 import Image from "next/image";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { PageHero } from "@/components/layout/PageHero";
+import type { Metadata } from "next";
 
 type TherapistPageProps = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string }
+}): Promise<Metadata> {
+  const { id } = await params;
+  const detail = await getTherapistDetail({ therapistId: id });
+  if (!detail?.therapist) {
+    return { title: "Therapist — Serenity Spa" }
+  }
+  return {
+    title: `${detail.therapist.name} — Serenity Spa`,
+    description: detail.therapist.bio_short
+      ?? `Book a session with ${detail.therapist.name} at Serenity Spa.`,
+  }
+}
 
 export default async function TherapistPage({ params }: TherapistPageProps) {
   const { id } = await await params;

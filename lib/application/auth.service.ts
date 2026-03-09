@@ -1,5 +1,6 @@
 import { ValidationError, InternalError } from "../domain/errors";
 import { createAuthRepository, type AuthRepository } from "../infra/supabase/auth.repo";
+import { MIN_PASSWORD_LENGTH } from "../config/constants";
 
 export interface AuthDependencies {
   authRepo: AuthRepository;
@@ -55,8 +56,8 @@ export async function updatePassword(
   input: { password: string },
   deps: AuthDependencies = createDefaultDeps(),
 ): Promise<void> {
-  if (!input.password || input.password.length < 8) {
-    throw new ValidationError("Password must be at least 8 characters long.");
+  if (!input.password || input.password.length < MIN_PASSWORD_LENGTH) {
+    throw new ValidationError("Password must be at least " + MIN_PASSWORD_LENGTH + " characters long.");
   }
   try {
     await deps.authRepo.updatePassword(input.password);
@@ -74,8 +75,8 @@ export async function confirmPasswordRecovery(
       "This password reset link is invalid or has expired. Please request a new one.",
     );
   }
-  if (!input.password || input.password.length < 8) {
-    throw new ValidationError("Password must be at least 8 characters long.");
+  if (!input.password || input.password.length < MIN_PASSWORD_LENGTH) {
+    throw new ValidationError("Password must be at least " + MIN_PASSWORD_LENGTH + " characters long.");
   }
   try {
     await deps.authRepo.setSession(input.accessToken, input.refreshToken);

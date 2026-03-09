@@ -1,6 +1,7 @@
 import type { Booking } from "../../domain/booking.types";
 import { getSupabaseUserClient } from "./userClient";
 import { getSupabaseAdminClient } from "./adminClient";
+import { ADMIN_BOOKING_LIMIT, CUSTOMER_BOOKING_LIMIT, BOOKING_STATUS } from "../../config/constants";
 
 export interface BookingRepository {
   listBookings(): Promise<Booking[]>;
@@ -48,7 +49,7 @@ export function createBookingRepository(): BookingRepository {
         .from("bookings")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(500); // TODO: replace with cursor pagination when bookings exceed 500
+        .limit(ADMIN_BOOKING_LIMIT); // TODO: replace with cursor pagination when bookings exceed 500
       if (error) throw error;
       return (data ?? []) as Booking[];
     },
@@ -68,7 +69,7 @@ export function createBookingRepository(): BookingRepository {
           time_slots!time_slot_id(start_time)
         `)
         .order("created_at", { ascending: false })
-        .limit(500); // TODO: replace with cursor pagination when bookings exceed 500
+        .limit(ADMIN_BOOKING_LIMIT); // TODO: replace with cursor pagination when bookings exceed 500
       if (error) throw error;
 
       type Raw = {
@@ -126,7 +127,7 @@ export function createBookingRepository(): BookingRepository {
       const { count, error } = await supabase
         .from("bookings")
         .select("id", { count: "exact", head: true })
-        .eq("status", "confirmed")
+        .eq("status", BOOKING_STATUS.CONFIRMED)
         .in("time_slot_id", slotIds);
 
       if (error) throw error;
@@ -142,7 +143,7 @@ export function createBookingRepository(): BookingRepository {
         )
         .eq("customer_id", profileId)
         .order("created_at", { ascending: false })
-        .limit(50); // shows most recent 50 bookings per customer
+        .limit(CUSTOMER_BOOKING_LIMIT); // shows most recent 50 bookings per customer
       if (error) throw error;
       return (data ?? []) as Array<{
         id: string;
@@ -215,7 +216,7 @@ export function createBookingRepository(): BookingRepository {
       const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled" })
+        .update({ status: BOOKING_STATUS.CANCELLED })
         .eq("id", bookingId)
         .eq("customer_id", customerId)
         .select("*")

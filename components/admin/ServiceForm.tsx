@@ -7,6 +7,7 @@ import { ImageUpload } from "@/components/ui/ImageUpload";
 import { logger } from "@/lib/utils/logger";
 import type { AdminServiceInput } from "@/lib/utils/validation";
 import { adminServiceSchema } from "@/lib/utils/validation";
+import { MAX_GALLERY_IMAGES } from "@/lib/config/constants";
 
 type ServiceFormInput = AdminServiceInput & { id?: string };
 
@@ -308,7 +309,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
             )}
 
             {/* Upload new gallery image */}
-            {galleryImages.length < 8 && (
+            {galleryImages.length < MAX_GALLERY_IMAGES && (
               <ImageUpload
                 currentUrl={null}
                 bucket="service-images"
@@ -320,9 +321,9 @@ export default function ServiceForm({ initial, onSaved }: Props) {
               />
             )}
 
-            {galleryImages.length >= 8 && (
+            {galleryImages.length >= MAX_GALLERY_IMAGES && (
               <p className="text-xs text-stone-400">
-                Maximum 8 gallery images reached.
+                Maximum {MAX_GALLERY_IMAGES} gallery images reached.
               </p>
             )}
           </div>

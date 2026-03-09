@@ -1,6 +1,7 @@
 import type { Service, ServiceImage, ServiceImageAddInput } from "../../domain/service.types";
 import { getSupabaseUserClient } from "./userClient";
 import { getSupabaseAdminClient } from "./adminClient";
+import { ADMIN_LIST_LIMIT } from "../../config/constants";
 
 export interface ServiceRepository {
   listActiveServices(): Promise<Service[]>;
@@ -228,7 +229,7 @@ export function createServiceRepository(): ServiceRepository {
         .from("services")
         .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(200);
+        .limit(ADMIN_LIST_LIMIT);
       if (error) throw error;
       return (data ?? []) as Service[];
     },
@@ -419,7 +420,7 @@ export function createServiceRepository(): ServiceRepository {
           )
         `)
         .order("updated_at", { ascending: false })
-        .limit(200);
+        .limit(ADMIN_LIST_LIMIT);
       
       if (error) throw error;
       
