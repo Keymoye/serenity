@@ -47,7 +47,8 @@ export function createBookingRepository(): BookingRepository {
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500); // TODO: replace with cursor pagination when bookings exceed 500
       if (error) throw error;
       return (data ?? []) as Booking[];
     },
@@ -66,7 +67,8 @@ export function createBookingRepository(): BookingRepository {
           therapists!therapist_id(name),
           time_slots!time_slot_id(start_time)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500); // TODO: replace with cursor pagination when bookings exceed 500
       if (error) throw error;
 
       type Raw = {
@@ -105,17 +107,14 @@ export function createBookingRepository(): BookingRepository {
 
     async countConfirmedBookingsWithSlotBetween(startIso: string, endIso: string) {
       const supabase = await getSupabaseAdminClient();
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from("bookings")
-        .select("id, time_slots(start_time), status")
+        .select("id", { count: "exact", head: true })
         .eq("status", "confirmed")
         .gte("time_slots.start_time", startIso)
         .lte("time_slots.start_time", endIso);
       if (error) throw error;
-
-      type Row = { id: string; time_slots?: { start_time?: string } };
-      const rows = (data ?? []) as unknown as Row[];
-      return rows.filter((r) => Boolean(r.time_slots && r.time_slots.start_time)).length;
+      return count ?? 0;
     },
 
     async listCustomerBookingRows(profileId: string) {
@@ -126,7 +125,8 @@ export function createBookingRepository(): BookingRepository {
           "id, status, reference_code, notes, time_slots(start_time), services(name), therapists(name)",
         )
         .eq("customer_id", profileId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50); // shows most recent 50 bookings per customer
       if (error) throw error;
       return (data ?? []) as any;
     },

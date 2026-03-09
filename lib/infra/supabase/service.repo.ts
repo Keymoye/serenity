@@ -226,7 +226,8 @@ export function createServiceRepository(): ServiceRepository {
       const { data, error } = await supabase
         .from("services")
         .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
-        .order("updated_at", { ascending: false });
+        .order("updated_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as Service[];
     },
@@ -416,7 +417,8 @@ export function createServiceRepository(): ServiceRepository {
             sort_order
           )
         `)
-        .order("updated_at", { ascending: false });
+        .order("updated_at", { ascending: false })
+        .limit(200);
       
       if (error) throw error;
       

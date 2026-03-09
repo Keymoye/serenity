@@ -217,13 +217,18 @@ export async function confirmBooking(
       status: "confirmed",
       reference_code: referenceCode,
       notes: payload.notes || null,
-    } as unknown as Omit<Booking, "id" | "created_at">);
+    });
   } catch (error) {
     // Best-effort rollback: reopen the slot if booking insert fails.
     try {
       await deps.timeSlotRepo.setAvailable(payload.timeSlotId);
-    } catch {
-      // swallow rollback failure; slot remains unavailable and must be reconciled manually
+    } catch (rollbackError) {
+      logger.error(
+        "CRITICAL: slot rollback failed after booking insert failure. " +
+        "Slot is stuck as unavailable and requires manual reconciliation.",
+        rollbackError,
+        { timeSlotId: payload.timeSlotId }
+      )
     }
     throw new InternalError("INSERT_FAILED", "Unable to confirm booking.", {
       timeSlotId: payload.timeSlotId,

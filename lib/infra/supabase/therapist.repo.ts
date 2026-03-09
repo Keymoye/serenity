@@ -31,7 +31,8 @@ export function createTherapistRepository(): TherapistRepository {
       const { data, error } = await supabase
         .from("therapists")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200); // reasonable ceiling for spa
       if (error) throw error;
       return (data ?? []) as Therapist[];
     },
