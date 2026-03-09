@@ -148,6 +148,7 @@ export const adminServiceSchema = z.object({
     .max(10000, "Price seems too high."),
   is_active: z.boolean().optional(),
   therapistIds: z.array(z.string().uuid()).optional(),
+  description: z.string().nullable().optional(),
 });
 
 export type AdminServiceInput = z.infer<typeof adminServiceSchema>;

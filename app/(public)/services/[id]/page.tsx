@@ -71,11 +71,7 @@ export default async function ServiceDetailPage({
         subtitle={service.description ?? "A deeply restorative treatment designed to calm the nervous system, release tension, and leave you feeling centered and renewed."}
         ctaLabel="Book this service"
         ctaHref={`/book?serviceId=${encodeURIComponent(service.id)}`}
-        imageSrc={
-          images[0]?.image_url
-          ?? service?.thumbnail_url
-          ?? undefined
-        }
+        imageSrc={images[0]?.image_url ?? undefined}
       />
 
       <SectionWrapper>

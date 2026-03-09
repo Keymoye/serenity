@@ -4,10 +4,9 @@ export interface Service {
   category: string | null;
   duration_minutes: number | null;
   price: number | null;
-  thumbnail_url?: string | null;
   description?: string | null;
+  first_image_url?: string | null;
   is_active: boolean | null;
-  is_featured?: boolean | null;
   updated_at: string | null;
 }
 

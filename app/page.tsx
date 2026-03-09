@@ -2,15 +2,16 @@ import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import { MapEmbed } from "@/components/MapEmbed";
 import Link from "next/link";
-import { listFeaturedServices } from "@/lib/application/service.service";
+import { listPublicServices } from "@/lib/application/service.service";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrapper } from "@/components/layout/SectionWrapper";
 import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
 
 async function getFeaturedServices(): Promise<ServiceSummary[]> {
   try {
-    const rows = await listFeaturedServices();
-    return (rows ?? []) as unknown as ServiceSummary[];
+    const rows = await listPublicServices({});
+    const featured = rows.slice(0, 3);
+    return (featured ?? []) as unknown as ServiceSummary[];
   } catch (error) {
     logger.error("Unexpected error while loading featured services", error);
     return [];

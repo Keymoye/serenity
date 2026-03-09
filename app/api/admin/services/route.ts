@@ -4,13 +4,13 @@ import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { getCurrentUser } from "@/lib/services/authService";
 import {
-  listServices,
   createServiceAdmin,
   updateServiceAdmin,
   deleteServiceAdmin,
   assignTherapistsToServiceAdmin,
   listAllTherapistsForAssignment,
 } from "@/lib/application/admin.service";
+import { createServiceRepository } from "@/lib/infra/supabase/service.repo";
 import {
   adminServiceSchema,
   adminServiceUpdateSchema,
@@ -40,9 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Otherwise existing list behaviour
-    const items = await listServices(
-      { userId: current.user.id, role: current.profile.role },
-    );
+    const serviceRepo = createServiceRepository();
+    const items = await serviceRepo.listAllServicesWithFirstImage();
     return NextResponse.json(items);
   } catch (error) {
     log.error("GET /api/admin/services failed", error);

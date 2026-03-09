@@ -65,6 +65,7 @@ export async function createServiceAdmin(
     category: input.category || null,
     duration_minutes: input.duration_minutes ?? null,
     price: input.price ?? null,
+    description: input.description || null,
     is_active: input.is_active ?? true,
   });
 }
@@ -84,6 +85,7 @@ export async function updateServiceAdmin(
     category: input.category || null,
     duration_minutes: input.duration_minutes ?? null,
     price: input.price ?? null,
+    description: input.description || null,
     is_active: input.is_active ?? true,
   });
 }

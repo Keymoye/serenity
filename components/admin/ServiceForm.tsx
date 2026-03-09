@@ -12,7 +12,7 @@ type ServiceInput = {
   duration_minutes?: number | null;
   price?: number | null;
   is_active?: boolean;
-  thumbnail_url?: string | null;
+  description?: string | null;
 };
 
 type Props = {
@@ -25,7 +25,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
   const [category, setCategory] = useState(initial?.category ?? "");
   const [duration, setDuration] = useState<string>(initial?.duration_minutes ? String(initial.duration_minutes) : "");
   const [price, setPrice] = useState<string>(initial?.price ? String(initial.price) : "");
-  const [thumbnailUrl, setThumbnailUrl] = useState<string>(initial?.thumbnail_url ?? "");
+  const [description, setDescription] = useState<string>(initial?.description ?? "");
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
   const [galleryImages, setGalleryImages] = 
@@ -98,7 +98,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const payload = { name, category: category || null, duration_minutes: duration ? Number(duration) : null, price: price ? Number(price) : null, is_active: isActive, thumbnail_url: thumbnailUrl, therapistIds: selectedTherapistIds };
+      const payload = { name, category: category || null, duration_minutes: duration ? Number(duration) : null, price: price ? Number(price) : null, is_active: isActive, description: description || null, therapistIds: selectedTherapistIds };
       if (initial?.id) {
         await apiFetch(`/api/admin/services`, {
           method: "PUT",
@@ -180,13 +180,15 @@ export default function ServiceForm({ initial, onSaved }: Props) {
         <input value={category ?? ""} onChange={(e) => setCategory(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
       </div>
       <div>
-        <ImageUpload
-          currentUrl={thumbnailUrl}
-          bucket="service-images"
-          entityId={initial?.id ?? "new"}
-          onUpload={(url) => setThumbnailUrl(url)}
-          label="Service image"
-          aspectRatio="landscape"
+        <label className="block text-sm font-medium text-stone-700">
+          Description
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          placeholder="Describe this service..."
+          className="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
         />
       </div>
 

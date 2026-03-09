@@ -11,7 +11,8 @@ export interface ServiceRepository {
       category: string | null;
       duration_minutes: number | null;
       price: number | null;
-      thumbnail_url: string | null;
+      description: string | null;
+      first_image_url: string | null;
     }>
   >;
   getPublicServiceDetail(serviceId: string): Promise<{
@@ -41,9 +42,11 @@ export interface ServiceRepository {
       category: string | null;
       duration_minutes: number | null;
       price: number | null;
-      thumbnail_url: string | null;
     }>
   >;
+  listAllServicesWithFirstImage(): Promise<Array<Service & {
+      first_image_url: string | null
+    }>>;
   listAllServices(): Promise<Service[]>;
   createService(payload: any): Promise<Service>;
   updateService(id: string, payload: any): Promise<Service>;
@@ -58,7 +61,6 @@ export interface ServiceRepository {
   addServiceImage(input: ServiceImageAddInput): Promise<ServiceImage>;
   deleteServiceImage(id: string): Promise<void>;
   listServiceImages(serviceId: string): Promise<ServiceImage[]>;
-  listFeaturedServiceSummaries(): Promise<Service[]>;
 }
 
 export function createServiceRepository(): ServiceRepository {
@@ -67,7 +69,7 @@ export function createServiceRepository(): ServiceRepository {
       const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
         .eq("is_active", true)
         .order("name", { ascending: true });
       if (error) throw error;
@@ -78,7 +80,15 @@ export function createServiceRepository(): ServiceRepository {
       const supabase = await getSupabaseUserClient();
       let query = supabase
         .from("services")
-        .select("id, name, category, duration_minutes, price, thumbnail_url, is_active")
+        .select(`
+          id, name, category,
+          duration_minutes, price, description,
+          is_active,
+          service_images (
+            image_url,
+            sort_order
+          )
+        `)
         .eq("is_active", true)
         .order("name", { ascending: true });
 
@@ -88,7 +98,42 @@ export function createServiceRepository(): ServiceRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as any;
+      
+      console.log('service summaries raw:', 
+        JSON.stringify(data?.slice(0, 2), null, 2));
+      
+      const result = (data ?? []).map((s: {
+        id: string;
+        name: string;
+        category: string | null;
+        duration_minutes: number | null;
+        price: number | null;
+        description: string | null;
+        is_active: boolean;
+        service_images?: Array<{
+          image_url: string;
+          sort_order: number | null;
+        }>;
+      }) => {
+        const images = (s.service_images ?? [])
+          .sort((a: { sort_order: number | null }, b: { sort_order: number | null }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          )
+        return {
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          duration_minutes: s.duration_minutes,
+          price: s.price,
+          description: s.description,
+          first_image_url: images[0]?.image_url ?? null,
+        }
+      });
+      
+      console.log('service summaries mapped:', 
+        JSON.stringify(result.slice(0, 2), null, 2));
+      
+      return result;
     },
 
     async getPublicServiceDetail(serviceId: string) {
@@ -97,7 +142,7 @@ export function createServiceRepository(): ServiceRepository {
       const { data: service, error: serviceError } = await supabase
         .from("services")
         .select(
-          "id, name, category, duration_minutes, price, description, thumbnail_url, is_active",
+          "id, name, category, duration_minutes, price, description, is_active",
         )
         .eq("id", serviceId)
         .eq("is_active", true)
@@ -166,7 +211,7 @@ export function createServiceRepository(): ServiceRepository {
       const supabase = await getSupabaseUserClient();
       const { data, error } = await supabase
         .from("therapist_service")
-        .select("services(id, name, category, duration_minutes, price, thumbnail_url)")
+        .select("services(id, name, category, duration_minutes, price)")
         .eq("therapist_id", therapistId)
         .eq("services.is_active", true);
       if (error) throw error;
@@ -178,7 +223,6 @@ export function createServiceRepository(): ServiceRepository {
           category: string | null;
           duration_minutes: number | null;
           price: number | null;
-          thumbnail_url: string | null;
         } | null;
       };
       const rows = (data ?? []) as unknown as ServiceRow[];
@@ -187,25 +231,12 @@ export function createServiceRepository(): ServiceRepository {
         .filter((s): s is NonNullable<ServiceRow["services"]> => Boolean(s));
     },
 
-    async listFeaturedServiceSummaries() {
-      const supabase = await getSupabaseUserClient();
-      const { data, error } = await supabase
-        .from("services")
-        .select(
-          "id, name, category, duration_minutes, price, thumbnail_url, is_featured, is_active",
-        )
-        .eq("is_active", true)
-        .eq("is_featured", true)
-        .limit(6);
-      if (error) throw error;
-      return (data ?? []) as any;
-    },
 
     async listAllServices() {
       const supabase = await getSupabaseAdminClient();
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Service[];
@@ -216,7 +247,7 @@ export function createServiceRepository(): ServiceRepository {
       const { data, error } = await supabase
         .from("services")
         .insert(payload)
-        .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
         .single();
       if (error) throw error;
       return data as Service;
@@ -228,7 +259,7 @@ export function createServiceRepository(): ServiceRepository {
         .from("services")
         .update(payload)
         .eq("id", id)
-        .select("id, name, category, duration_minutes, price, thumbnail_url, is_active, updated_at")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
         .single();
       if (error) throw error;
       return data as Service;
@@ -378,6 +409,58 @@ export function createServiceRepository(): ServiceRepository {
         .order('sort_order', { ascending: true })
       if (error) throw error
       return data ?? []
+    },
+
+    // List all services with first image for admin
+    async listAllServicesWithFirstImage(): Promise<Array<Service & {
+      first_image_url: string | null
+    }>> {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select(`
+          id, name, category,
+          duration_minutes, price, description,
+          is_active, updated_at,
+          service_images (
+            image_url,
+            sort_order
+          )
+        `)
+        .order("updated_at", { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data ?? []).map((s: {
+        id: string;
+        name: string;
+        category: string | null;
+        duration_minutes: number | null;
+        price: number | null;
+        description: string | null;
+        is_active: boolean;
+        updated_at: string;
+        service_images?: Array<{
+          image_url: string;
+          sort_order: number | null;
+        }>;
+      }) => {
+        const images = (s.service_images ?? [])
+          .sort((a: { sort_order: number | null }, b: { sort_order: number | null }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          );
+        return {
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          duration_minutes: s.duration_minutes,
+          price: s.price,
+          description: s.description,
+          is_active: s.is_active,
+          updated_at: s.updated_at,
+          first_image_url: images[0]?.image_url ?? null,
+        };
+      });
     },
   };
 }

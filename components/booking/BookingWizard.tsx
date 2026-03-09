@@ -19,6 +19,7 @@ type Service = {
   name: string;
   category: string | null;
   duration_minutes: number | null;
+  first_image_url: string | null;
 };
 
 type Therapist = {

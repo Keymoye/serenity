@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import {
-  adminServiceSchema,
-  type AdminServiceInput,
-} from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
-import { useRouter } from "next/navigation";
 import ServiceForm from "@/components/admin/ServiceForm";
 
 type ServiceRow = {
@@ -17,33 +12,15 @@ type ServiceRow = {
   duration_minutes: number | null;
   price: number | null;
   is_active: boolean | null;
-  thumbnail_url: string | null;
+  first_image_url: string | null;
   updated_at: string | null;
 };
 
-type FormState = {
-  values: AdminServiceInput;
-  error: string | null;
-  isSubmitting: boolean;
-};
 
-const INITIAL_FORM: AdminServiceInput = {
-  name: "",
-  category: "",
-  duration_minutes: 60,
-  price: 120,
-  is_active: true,
-};
 
 export default function AdminServicesPage() {
-  const router = useRouter();
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    values: INITIAL_FORM,
-    error: null,
-    isSubmitting: false,
-  });
   const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -82,80 +59,7 @@ export default function AdminServicesPage() {
     }
   };
 
-  const handleChange =
-    (field: keyof AdminServiceInput) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value =
-        field === "duration_minutes" || field === "price"
-          ? Number(event.target.value)
-          : event.target.value;
-      setForm((prev) => ({
-        ...prev,
-        values: { ...(prev.values as Record<string, unknown>), [field]: value } as AdminServiceInput,
-      }));
-    };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    setForm((prev) => ({
-      ...prev,
-      error: null,
-      isSubmitting: true,
-    }));
-
-    const parsed = adminServiceSchema.safeParse(form.values);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setForm((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
-      return;
-    }
-
-    try {
-      try {
-        await apiFetch("/api/admin/services", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: parsed.data.name,
-            category: parsed.data.category || null,
-            duration_minutes: parsed.data.duration_minutes,
-            price: parsed.data.price,
-            is_active: typeof parsed.data.is_active === "boolean" ? parsed.data.is_active : true,
-          }),
-        });
-        // reload after successful creation
-        await loadServices();
-        setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
-      } catch (err) {
-        logger.error("Failed to create service", err);
-        setForm((prev) => ({
-          ...prev,
-          error: "Unable to create service.",
-          isSubmitting: false,
-        }));
-        return;
-      }
-
-      setForm({
-        values: INITIAL_FORM,
-        error: null,
-        isSubmitting: false,
-      });
-      await loadServices();
-    } catch (error) {
-      logger.error("Unexpected error creating service", error);
-      setForm((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -208,9 +112,9 @@ export default function AdminServicesPage() {
                 services.map((service) => (
                   <tr key={service.id}>
                     <td className="px-4 py-3">
-                      {service.thumbnail_url ? (
+                      {service.first_image_url ? (
                         <img
-                          src={service.thumbnail_url}
+                          src={service.first_image_url}
                           alt={service.name}
                           className="h-10 w-10 rounded-lg 
                                      object-cover"

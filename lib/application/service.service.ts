@@ -42,23 +42,13 @@ export async function listBookingServices(
   }
 }
 
-export async function listFeaturedServices(
-  deps: ServiceDependencies = createDefaultDeps(),
-) {
-  try {
-    return await deps.serviceRepo.listFeaturedServiceSummaries();
-  } catch (error) {
-    throw new InternalError("SERVICES_FAILED", "Unable to load featured services.", { error });
-  }
-}
-
 export async function listTherapistsForService(
   input: { serviceId: string },
   deps: ServiceDependencies = createDefaultDeps(),
 ) {
   try {
     const therapists = await deps.serviceRepo.listTherapistsForService(input.serviceId);
-    return therapists.filter((t) => (t as any).is_active !== false);
+    return therapists.filter((t) => (t as { is_active?: boolean | null }).is_active !== false);
   } catch (error) {
     throw new InternalError("THERAPISTS_FAILED", "Unable to load therapists.", { error });
   }

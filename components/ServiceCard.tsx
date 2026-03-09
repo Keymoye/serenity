@@ -1,12 +1,11 @@
-import Image from "next/image";
-
 export type ServiceSummary = {
   id: string;
   name: string;
   category: string | null;
   duration_minutes: number | null;
   price: number | null;
-  thumbnail_url: string | null;
+  description: string | null;
+  first_image_url: string | null;
 };
 
 interface ServiceCardProps {
@@ -15,7 +14,7 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, href }: ServiceCardProps) {
-  const { name, category, duration_minutes, price, thumbnail_url } = service;
+  const { name, category, duration_minutes, price, first_image_url } = service;
 
   return (
     <a
@@ -23,12 +22,11 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
       className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative h-40 w-full bg-slate-100">
-        {thumbnail_url ? (
-          <Image
-            src={thumbnail_url}
+        {first_image_url ? (
+          <img
+            src={first_image_url}
             alt={name}
-            fill
-            className="object-cover"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
