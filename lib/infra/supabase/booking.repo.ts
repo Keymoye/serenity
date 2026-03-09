@@ -107,12 +107,28 @@ export function createBookingRepository(): BookingRepository {
 
     async countConfirmedBookingsWithSlotBetween(startIso: string, endIso: string) {
       const supabase = await getSupabaseAdminClient();
+
+      // Step 1: get time_slot IDs in range
+      // NOTE: confirm column name is start_time or starts_at from Supabase dashboard
+      const { data: slots, error: slotsError } =
+        await supabase
+          .from("time_slots")
+          .select("id")
+          .gte("start_time", startIso)
+          .lte("start_time", endIso);
+
+      if (slotsError) throw slotsError;
+      if (!slots || slots.length === 0) return 0;
+
+      const slotIds = slots.map((s) => s.id);
+
+      // Step 2: count confirmed bookings with those slot IDs
       const { count, error } = await supabase
         .from("bookings")
         .select("id", { count: "exact", head: true })
         .eq("status", "confirmed")
-        .gte("time_slots.start_time", startIso)
-        .lte("time_slots.start_time", endIso);
+        .in("time_slot_id", slotIds);
+
       if (error) throw error;
       return count ?? 0;
     },

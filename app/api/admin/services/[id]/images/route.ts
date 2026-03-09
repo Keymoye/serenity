@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { requireAdmin } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import {
   addServiceImageAdmin,
   deleteServiceImageAdmin,

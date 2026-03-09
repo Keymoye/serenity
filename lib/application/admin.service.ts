@@ -283,9 +283,6 @@ export async function getAdminMetrics(
     now.getMonth(),
     1,
   ).toISOString();
-  const bookingsThisMonth = await deps.bookingRepo.countBookingsSince(startOfMonth);
-
-  const unreadMessages = await deps.messageRepo.countUnreadMessages();
 
   const startOfToday = new Date(
     now.getFullYear(),
@@ -306,27 +303,41 @@ export async function getAdminMetrics(
     999,
   ).toISOString();
 
-  const upcomingToday =
-    await deps.bookingRepo.countConfirmedBookingsWithSlotBetween(
+  // Run first 3 metrics in parallel
+  const [
+    bookingsThisMonth,
+    unreadMessages,
+    upcomingToday,
+  ] = await Promise.all([
+    deps.bookingRepo.countBookingsSince(startOfMonth),
+    deps.messageRepo.countUnreadMessages(),
+    deps.bookingRepo.countConfirmedBookingsWithSlotBetween(
       startOfToday,
       endOfToday,
-    );
+    ),
+  ]);
 
-  // bookings per day chart
-  const bookingsLast7Days: Array<{ date: string; count: number }> = [];
-  for (let delta = 6; delta >= 0; delta--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - delta);
-    const start = new Date(d);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(d);
-    end.setHours(23, 59, 59, 999);
-    const count = await deps.bookingRepo.countConfirmedBookingsWithSlotBetween(
-      start.toISOString(),
-      end.toISOString(),
-    );
-    bookingsLast7Days.push({ date: start.toISOString().slice(0, 10), count });
-  }
+  // Run last 7 days queries in parallel
+  const last7 = Array.from(
+    { length: 7 },
+    (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (6 - i));
+      const start = new Date(d);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setHours(23, 59, 59, 999);
+      return deps.bookingRepo
+        .countConfirmedBookingsWithSlotBetween(
+          start.toISOString(),
+          end.toISOString()
+        ).then((count) => ({
+          date: start.toISOString().slice(0, 10),
+          count,
+        }));
+    }
+  );
+  const bookingsLast7Days = await Promise.all(last7);
 
   return { bookingsThisMonth, upcomingToday, unreadMessages, bookingsLast7Days };
 }
