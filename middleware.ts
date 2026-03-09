@@ -41,30 +41,39 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (isAdminRoute && session?.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        logger.error("Failed to load profile in middleware", profileError, {
-          userId: session.user.id,
-        });
-      }
-
-      if (!profile || profile.role !== "admin") {
-        logger.warn("Blocked non-admin access to admin route", {
-          userId: session.user.id,
-          role: profile?.role,
-          pathname,
-        });
-        url.pathname = "/";
-        url.search = "";
-        return NextResponse.redirect(url);
-      }
+    if (isAdminRoute) {
+    if (!session?.user) {
+      const next = encodeURIComponent(
+        pathname + url.search
+      )
+      url.pathname = "/auth/login"
+      url.search = `?next=${next}`
+      return NextResponse.redirect(url)
     }
+    
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      logger.error("Failed to load profile in middleware", profileError, {
+        userId: session.user.id,
+      });
+    }
+
+    if (!profile || profile.role !== "admin") {
+      logger.warn("Blocked non-admin access to admin route", {
+        userId: session.user.id,
+        role: profile?.role,
+        pathname,
+      });
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
     return res;
   } catch (error) {

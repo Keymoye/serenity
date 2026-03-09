@@ -2,6 +2,7 @@ import { getSupabaseUserClient } from './userClient'
 import { getSupabaseAdminClient } from './adminClient'
 import type { SiteSettings } from '@/lib/domain/siteSettings.types'
 import { DEFAULT_SITE_SETTINGS } from '@/lib/domain/siteSettings.types'
+import { logger } from '@/lib/utils/logger'
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   const supabase = await getSupabaseUserClient()
@@ -11,7 +12,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     .select('key, value')
 
   if (error) {
-    console.error('Failed to load site settings', error)
+    logger.error('Failed to load site settings', error)
     return { ...DEFAULT_SITE_SETTINGS }
   }
 

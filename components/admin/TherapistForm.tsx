@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { logger } from "@/lib/utils/logger";
 
 import type { AdminTherapistInput } from "@/lib/domain/admin.types";
 
@@ -96,7 +97,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
       onSaved?.();
       setLoading(false);
     } catch (err: unknown) {
-      console.error(err);
+      logger.error('Failed to save therapist', err);
       setError(err instanceof Error ? err.message : "Failed to save therapist");
       setLoading(false);
     }

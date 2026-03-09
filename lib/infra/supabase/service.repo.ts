@@ -48,8 +48,6 @@ export interface ServiceRepository {
       first_image_url: string | null
     }>>;
   listAllServices(): Promise<Service[]>;
-  createService(payload: any): Promise<Service>;
-  updateService(id: string, payload: any): Promise<Service>;
   createService(payload: Omit<Service, "id" | "updated_at">): Promise<Service>;
   updateService(id: string, payload: Partial<Omit<Service, "id">>): Promise<Service>;
   deleteService(id: string): Promise<void>;
@@ -98,11 +96,7 @@ export function createServiceRepository(): ServiceRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      
-      console.log('service summaries raw:', 
-        JSON.stringify(data?.slice(0, 2), null, 2));
-      
-      const result = (data ?? []).map((s: {
+      return (data ?? []).map((s: {
         id: string;
         name: string;
         category: string | null;
@@ -129,11 +123,6 @@ export function createServiceRepository(): ServiceRepository {
           first_image_url: images[0]?.image_url ?? null,
         }
       });
-      
-      console.log('service summaries mapped:', 
-        JSON.stringify(result.slice(0, 2), null, 2));
-      
-      return result;
     },
 
     async getPublicServiceDetail(serviceId: string) {
@@ -186,8 +175,8 @@ export function createServiceRepository(): ServiceRepository {
         .filter((t): t is Therapist => Boolean(t));
 
       return {
-        service: service as any,
-        images: (images ?? []) as any,
+        service: service as Service,
+        images: (images ?? []) as ServiceImage[],
         therapists,
       };
     },

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { postJson, apiFetch } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { logger } from "@/lib/utils/logger";
 
 type ServiceInput = {
   id?: string;
@@ -81,7 +82,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     fetch(`/api/admin/services/${initial.id}/images`)
       .then((r) => r.json())
       .then((data) => setGalleryImages(data.images ?? []))
-      .catch(console.error)
+      .catch((e) => logger.error('Failed to load gallery images', e))
       .finally(() => setGalleryLoading(false))
   }, [initial?.id])
 
@@ -110,7 +111,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
       }
       onSaved?.();
     } catch (err: unknown) {
-      console.error(err);
+      logger.error('Failed to save service', err);
       setError(err instanceof Error ? err.message : "Failed to save service");
     } finally {
       setLoading(false);
@@ -139,7 +140,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
         setGalleryImages((prev) => [...prev, data.image])
       }
     } catch (e) {
-      console.error(e)
+      logger.error('Failed to upload gallery image', e)
     } finally {
       setUploadingGallery(false)
     }
@@ -164,7 +165,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
         prev.filter((img) => img.id !== imageId)
       )
     } catch (e) {
-      console.error(e)
+      logger.error('Failed to delete gallery image', e)
     }
   }
 
