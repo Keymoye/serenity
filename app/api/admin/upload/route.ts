@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import { createStorageRepository } from "@/lib/infra/supabase/storage.repo";
 import {
   UploadBucket,
@@ -16,13 +16,7 @@ export async function POST(request: Request) {
   const log = logger.withContext({ correlationId, route: "admin.upload.POST" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     // only admin may upload
     if (current.profile.role !== "admin") {
@@ -100,7 +94,7 @@ export async function DELETE(request: NextRequest) {
   const correlationId = randomUUID()
   try {
     // Auth + admin check (same pattern as POST)
-    const current = await getCurrentUser()
+    const current = await requireAdmin()
     if (!current) {
       return NextResponse.json(
         { error: "Unauthorized.", code: "UNAUTHENTICATED" },

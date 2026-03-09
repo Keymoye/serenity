@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { logger } from "../../utils/logger";
 import { getSupabaseServerAuthClient } from "./authClient";
 import { getSupabaseUserClient } from "./userClient";
+import { UnauthorizedError, ForbiddenError } from "../../domain/errors";
 
 export type AppRole = "customer" | "admin";
 
@@ -76,8 +77,7 @@ export async function requireCustomer(): Promise<CurrentUser> {
 export async function requireAdmin(): Promise<CurrentUser> {
   const current = await getCurrentUser();
   if (!current) {
-    logger.info("Unauthenticated access to admin route");
-    redirect("/");
+    throw new UnauthorizedError();
   }
 
   if (current.profile.role !== "admin") {
@@ -85,7 +85,7 @@ export async function requireAdmin(): Promise<CurrentUser> {
       userId: current.user.id,
       role: current.profile.role,
     });
-    redirect("/");
+    throw new ForbiddenError();
   }
 
   return current;

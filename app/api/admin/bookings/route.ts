@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import {
   listAdminBookingRows,
   updateBookingStatusAdmin,
@@ -15,13 +15,7 @@ export async function GET(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.bookings.GET" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     // fetch all rows first, then apply any filtering/pagination in-memory
     let rows = await listAdminBookingRows({
@@ -70,13 +64,7 @@ export async function PUT(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.bookings.PUT" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminBookingStatusSchema.safeParse({
@@ -105,19 +93,10 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   const correlationId = randomUUID();
-  const log = logger.withContext({
-    correlationId,
-    route: "admin.bookings.DELETE",
-  });
+  const log = logger.withContext({ correlationId, route: "admin.bookings.DELETE" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const id = body?.bookingId || body?.id;

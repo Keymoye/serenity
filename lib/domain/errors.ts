@@ -34,6 +34,12 @@ export class UnauthorizedError extends DomainError {
   }
 }
 
+export class ForbiddenError extends DomainError {
+  constructor(message = "Forbidden", details?: unknown) {
+    super("FORBIDDEN", message, details);
+  }
+}
+
 export class InternalError extends DomainError {
   constructor(code = "INTERNAL_ERROR", message = "Internal server error.", details?: unknown) {
     super(code, message, details);

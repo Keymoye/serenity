@@ -4,6 +4,7 @@ import {
   NotFoundError,
   ConflictError,
   UnauthorizedError,
+  ForbiddenError,
 } from "../domain/errors";
 
 export type StandardErrorResponse = {
@@ -60,6 +61,9 @@ function classify(error: unknown): { status: number; code: string; message: stri
   }
   if (error instanceof UnauthorizedError) {
     return { status: 401, code: error.code, message: error.message };
+  }
+  if (error instanceof ForbiddenError) {
+    return { status: 403, code: error.code, message: error.message };
   }
   if (error instanceof DomainError) {
     return { status: 500, code: error.code, message: error.message };

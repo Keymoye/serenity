@@ -4,6 +4,7 @@ import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { sendMagicLink } from "@/lib/application/auth.service";
+import { checkRateLimit, authRatelimit } from "@/lib/infra/upstash/ratelimit";
 
 const magicLinkSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -14,6 +15,23 @@ export async function POST(req: Request) {
   const log = logger.withContext({ correlationId, route: "auth.magic-link" });
 
   try {
+    // Rate limit by IP
+    const ip = req.headers.get("x-forwarded-for")
+      ?? req.headers.get("x-real-ip")
+      ?? "anonymous"
+    const { blocked, headers } =
+      await checkRateLimit(
+        `magic-link:${ip}`,
+        authRatelimit
+      )
+    if (blocked) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again later.",
+          code: "RATE_LIMITED" },
+        { status: 429, headers }
+      )
+    }
+
     const body = await req.json();
     const parsed = magicLinkSchema.safeParse(body);
     

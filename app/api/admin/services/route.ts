@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import {
   createServiceAdmin,
   updateServiceAdmin,
@@ -21,14 +21,7 @@ export async function GET(request: NextRequest) {
   const log = logger.withContext({ correlationId, route: "admin.services.GET" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
-
+    const current = await requireAdmin();
     const url = new URL(request.url);
 
     // If ?forAssignment=true return all therapists list
@@ -55,13 +48,7 @@ export async function POST(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.services.POST" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminServiceSchema.safeParse(body);
@@ -97,13 +84,7 @@ export async function PUT(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.services.PUT" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminServiceUpdateSchema.safeParse(body);
@@ -143,13 +124,7 @@ export async function DELETE(req: Request) {
   });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const url = new URL(req.url);
     const id = url.searchParams.get("id");

@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import { adminTimeSlotCreateSchema } from "@/lib/domain/admin.types";
 import { listTimeSlotsAdmin, createTimeSlotAdmin, deleteTimeSlotAdmin } from "@/lib/application/admin.service";
 
@@ -11,13 +11,7 @@ export async function GET() {
   const log = logger.withContext({ correlationId, route: "admin.timeSlots.GET" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const slots = await listTimeSlotsAdmin({ userId: current.user.id, role: current.profile.role });
     return NextResponse.json(
@@ -41,13 +35,7 @@ export async function POST(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.timeSlots.POST" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminTimeSlotCreateSchema.safeParse(body);
@@ -76,13 +64,7 @@ export async function DELETE(req: Request) {
   const log = logger.withContext({ correlationId, route: "admin.timeSlots.DELETE" });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const id = body?.timeSlotId || body?.id;

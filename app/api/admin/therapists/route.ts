@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-import { getCurrentUser } from "@/lib/services/authService";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
 import {
   listTherapistsAdmin,
   createTherapistAdmin,
@@ -24,13 +24,7 @@ export async function GET(request: NextRequest) {
   });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const url = new URL(request.url);
 
@@ -62,13 +56,7 @@ export async function POST(req: Request) {
   });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminTherapistSchema.safeParse(body);
@@ -108,13 +96,7 @@ export async function PUT(req: Request) {
   });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const parsed = adminTherapistUpdateSchema.safeParse(body);
@@ -155,13 +137,7 @@ export async function DELETE(req: Request) {
   });
 
   try {
-    const current = await getCurrentUser();
-    if (!current) {
-      return NextResponse.json(
-        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
-        { status: 401 },
-      );
-    }
+    const current = await requireAdmin();
 
     const body = await req.json();
     const id = body?.therapistId || body?.id;
