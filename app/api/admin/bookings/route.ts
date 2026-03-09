@@ -8,7 +8,7 @@ import {
   updateBookingStatusAdmin,
   deleteBookingAdmin,
 } from "@/lib/application/admin.service";
-import { adminBookingStatusSchema } from "@/lib/domain/admin.types";
+import { adminBookingStatusSchema, adminBookingDeleteSchema } from "@/lib/utils/validation";
 
 export async function GET(req: Request) {
   const correlationId = randomUUID();
@@ -99,16 +99,16 @@ export async function DELETE(req: Request) {
     const current = await requireAdmin();
 
     const body = await req.json();
-    const id = body?.bookingId || body?.id;
-    if (!id || typeof id !== "string") {
+    const parsed = adminBookingDeleteSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing bookingId", code: "VALIDATION_ERROR" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 },
       );
     }
 
     await deleteBookingAdmin(
-      id,
+      parsed.data.id,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json({ success: true });

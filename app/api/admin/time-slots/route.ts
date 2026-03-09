@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/utils/logger";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
 import { requireAdmin } from "@/lib/infra/supabase/currentUser";
-import { adminTimeSlotCreateSchema } from "@/lib/domain/admin.types";
+import { adminTimeSlotCreateSchema, adminTimeSlotDeleteSchema } from "@/lib/utils/validation";
 import { listTimeSlotsAdmin, createTimeSlotAdmin, deleteTimeSlotAdmin } from "@/lib/application/admin.service";
 
 export async function GET() {
@@ -67,16 +67,16 @@ export async function DELETE(req: Request) {
     const current = await requireAdmin();
 
     const body = await req.json();
-    const id = body?.timeSlotId || body?.id;
-    if (!id || typeof id !== "string") {
+    const parsed = adminTimeSlotDeleteSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing timeSlotId", code: "VALIDATION_ERROR" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 },
       );
     }
 
     await deleteTimeSlotAdmin(
-      id,
+      parsed.data.id,
       { userId: current.user.id, role: current.profile.role },
     );
     return NextResponse.json({ success: true });

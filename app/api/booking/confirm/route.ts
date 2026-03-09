@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       userId: current.user.id,
     });
 
-    return NextResponse.json({ booking, referenceCode });
+    return NextResponse.json({ booking, referenceCode }, { status: 201 });
   } catch (error) {
     log.error("Error in booking confirm route", error);
     const { status, body } = mapErrorToLegacyHttp(error);

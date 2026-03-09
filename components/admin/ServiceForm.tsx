@@ -44,23 +44,17 @@ export default function ServiceForm({ initial, onSaved }: Props) {
       setLoadingTherapists(true);
       try {
         // Load all available therapists
-        const res = await fetch(
-          '/api/admin/services?forAssignment=true'
-        );
-        const data = await res.json();
+        const data = await apiFetch<{ therapists: Array<{ id: string; name: string; title: string | null }> }>('/api/admin/services?forAssignment=true');
         setAllTherapists(data.therapists ?? []);
 
         // If editing, load current assignments
         if (initial?.id) {
-          const assignRes = await fetch(
-            `/api/services/${initial.id}/therapists`
-          );
-          const assignData = await assignRes.json();
-          const currentIds = (assignData ?? [])
-            .map((t: { id: string }) => t.id);
+          const assignData = await apiFetch<Array<{ id: string }>>(`/api/services/${initial.id}/therapists`);
+          const currentIds = assignData.map((t: { id: string }) => t.id);
           setSelectedTherapistIds(currentIds);
         }
-      } catch {
+      } catch (err) {
+        logger.error('Failed to load therapist data', err);
         // silently fail — assignments are not critical
       } finally {
         setLoadingTherapists(false);
@@ -72,8 +66,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
   useEffect(() => {
     if (!initial?.id) return
     setGalleryLoading(true)
-    fetch(`/api/admin/services/${initial.id}/images`)
-      .then((r) => r.json())
+    apiFetch<{ images: Array<{ id: string; image_url: string; sort_order: number | null }> }>(`/api/admin/services/${initial.id}/images`)
       .then((data) => setGalleryImages(data.images ?? []))
       .catch((e) => logger.error('Failed to load gallery images', e))
       .finally(() => setGalleryLoading(false))
@@ -115,20 +108,16 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     if (!url || !initial?.id) return
     setUploadingGallery(true)
     try {
-      const res = await fetch(
-        `/api/admin/services/${initial.id}/images`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json' 
-          },
-          body: JSON.stringify({
-            image_url: url,
-            sort_order: galleryImages.length,
-          }),
-        }
-      )
-      const data = await res.json()
+      const data = await apiFetch<{ image: { id: string; image_url: string; sort_order: number | null } }>(`/api/admin/services/${initial.id}/images`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          image_url: url,
+          sort_order: galleryImages.length,
+        }),
+      })
       if (data.image) {
         setGalleryImages((prev) => [...prev, data.image])
       }
@@ -144,16 +133,13 @@ export default function ServiceForm({ initial, onSaved }: Props) {
   ) {
     if (!initial?.id) return
     try {
-      await fetch(
-        `/api/admin/services/${initial.id}/images`,
-        {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json' 
-          },
-          body: JSON.stringify({ image_id: imageId }),
-        }
-      )
+      await apiFetch(`/api/admin/services/${initial.id}/images`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ image_id: imageId }),
+      })
       setGalleryImages((prev) => 
         prev.filter((img) => img.id !== imageId)
       )

@@ -125,6 +125,12 @@ export const bookingConfirmSchema = z.object({
 
 export type BookingConfirmInput = z.infer<typeof bookingConfirmSchema>;
 
+export const bookingLockSchema = z.object({
+  timeSlotId: z.string().uuid(),
+});
+
+export type BookingLockInput = z.infer<typeof bookingLockSchema>;
+
 // ---------- Admin Schemas ----------
 
 export const adminServiceSchema = z.object({
@@ -189,10 +195,48 @@ export type AdminTimeSlotCreateInput = z.infer<
   typeof adminTimeSlotCreateSchema
 >;
 
+export const adminTimeSlotDeleteSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type AdminTimeSlotDeleteInput = z.infer<typeof adminTimeSlotDeleteSchema>;
+
 export const adminBookingStatusSchema = z.object({
   bookingId: z.string().min(1, "Booking ID is required."),
   status: z.enum(["confirmed", "cancelled", "pending"]),
 });
 
 export type AdminBookingStatusInput = z.infer<typeof adminBookingStatusSchema>;
+
+export const adminBookingDeleteSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type AdminBookingDeleteInput = z.infer<typeof adminBookingDeleteSchema>;
+
+export const adminUploadSchema = z.object({
+  bucket: z.enum(['therapist-photos', 'service-images', 'spa-hero', 'avatar-uploads']),
+});
+
+export type AdminUploadInput = z.infer<typeof adminUploadSchema>;
+
+export const adminUploadDeleteSchema = z.object({
+  url: z.string().url(),
+  bucket: z.enum(['therapist-photos', 'service-images', 'spa-hero', 'avatar-uploads']),
+});
+
+export type AdminUploadDeleteInput = z.infer<typeof adminUploadDeleteSchema>;
+
+export const serviceImageAddSchema = z.object({
+  image_url: z.string().url(),
+  sort_order: z.number().int().nullable().optional(),
+});
+
+export type ServiceImageAddInput = z.infer<typeof serviceImageAddSchema>;
+
+export const serviceImageDeleteSchema = z.object({
+  image_id: z.string().uuid(),
+});
+
+export type ServiceImageDeleteInput = z.infer<typeof serviceImageDeleteSchema>;
 

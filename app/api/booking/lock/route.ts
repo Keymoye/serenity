@@ -2,12 +2,9 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/services/authService";
 import { logger } from "@/lib/utils/logger";
+import { bookingLockSchema } from "@/lib/utils/validation";
 import { lockSlot } from "@/lib/application/booking.service";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
-
-type LockRequestBody = {
-  timeSlotId?: string;
-};
 
 export async function POST(request: Request) {
   const correlationId = randomUUID();
@@ -22,18 +19,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const json = (await request.json()) as LockRequestBody;
-    const { timeSlotId } = json;
-
-    if (!timeSlotId) {
+    const json = (await request.json()) as unknown;
+    const parsed = bookingLockSchema.safeParse(json);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing required parameters", code: "VALIDATION_ERROR" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 },
       );
     }
 
     await lockSlot(
-      { timeSlotId },
+      { timeSlotId: parsed.data.timeSlotId },
       {
         userId: current.user.id,
         customerProfileId: current.profile.id,

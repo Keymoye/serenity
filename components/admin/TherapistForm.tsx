@@ -37,19 +37,12 @@ export default function TherapistForm({ initial, onSaved }: Props) {
       setLoadingServices(true);
       try {
         // Load all available services
-        const res = await fetch(
-          '/api/admin/therapists?forAssignment=true'
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await apiFetch<{ services: Array<{ id: string; name: string; category: string | null }> }>('/api/admin/therapists?forAssignment=true');
         setAllServices(data.services ?? []);
 
         // If editing, load current assignments
         if (initial?.id) {
-          const assignRes = await fetch(
-            `/api/therapists/${initial.id}`
-          );
-          const assignData = await assignRes.json();
+          const assignData = await apiFetch<{ services: Array<{ id: string }> }>(`/api/therapists/${initial.id}`);
           const currentIds = (assignData.services ?? [])
             .map((s: { id: string }) => s.id);
           setSelectedServiceIds(currentIds);

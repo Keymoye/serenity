@@ -10,6 +10,7 @@ import {
   MAX_UPLOAD_SIZE_BYTES,
   ALLOWED_IMAGE_TYPES,
 } from "@/lib/domain/upload.types";
+import { adminUploadSchema, adminUploadDeleteSchema } from "@/lib/utils/validation";
 
 export async function POST(request: Request) {
   const correlationId = randomUUID();
@@ -31,9 +32,18 @@ export async function POST(request: Request) {
     const bucket = formData.get("bucket") as string | null;
     const entityId = formData.get("entityId") as string | null;
 
-    if (!bucket || !UPLOAD_BUCKETS.includes(bucket as UploadBucket)) {
+    // Validate bucket with Zod
+    const bucketParsed = adminUploadSchema.safeParse({ bucket });
+    if (!bucketParsed.success) {
       return NextResponse.json(
         { error: "Invalid or missing bucket", code: "INVALID_BUCKET" },
+        { status: 400 },
+      );
+    }
+
+    if (!UPLOAD_BUCKETS.includes(bucketParsed.data.bucket as UploadBucket)) {
+      return NextResponse.json(
+        { error: "Invalid bucket", code: "INVALID_BUCKET" },
         { status: 400 },
       );
     }
@@ -70,19 +80,19 @@ export async function POST(request: Request) {
     }
 
     const ext = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
-    const entityType = bucket === "therapist-photos" ? "therapist" : bucket === "avatar-uploads" ? "user" : "service";
+    const entityType = bucketParsed.data.bucket === "therapist-photos" ? "therapist" : bucketParsed.data.bucket === "avatar-uploads" ? "user" : "service";
     const filename = `${entityType}-${entityId.trim()}-${Date.now()}.${ext}`;
 
     const buffer = await file.arrayBuffer();
     const storageRepo = createStorageRepository();
     const url = await storageRepo.uploadFile(
-      bucket as UploadBucket,
+      bucketParsed.data.bucket as UploadBucket,
       filename,
       buffer,
       file.type,
     );
 
-    return NextResponse.json({ url, filename, bucket });
+    return NextResponse.json({ url, filename, bucket: bucketParsed.data.bucket }, { status: 201 });
   } catch (error) {
     log.error("POST /api/admin/upload failed", error);
     const { status, body } = mapErrorToLegacyHttp(error);
@@ -109,24 +119,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { bucket, filename } = body
-
-    if (!bucket || !UPLOAD_BUCKETS.includes(bucket as UploadBucket)) {
+    const parsed = adminUploadDeleteSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid bucket", code: "INVALID_BUCKET" },
-        { status: 400 }
-      )
-    }
-
-    if (!filename || typeof filename !== 'string') {
-      return NextResponse.json(
-        { error: "Missing filename", code: "MISSING_FILENAME" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 }
       )
     }
 
     const storageRepo = createStorageRepository()
-    await storageRepo.deleteFile(bucket as UploadBucket, filename)
+    // Extract filename from URL for deletion
+    const urlParts = new URL(parsed.data.url).pathname.split('/')
+    const filename = urlParts[urlParts.length - 1]
+    await storageRepo.deleteFile(parsed.data.bucket, filename)
 
     return NextResponse.json({ success: true })
 

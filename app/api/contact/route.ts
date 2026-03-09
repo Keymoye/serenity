@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       subject: payload.subject,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     log.error("Unexpected error in contact form route", error);
     const { status, body } = mapErrorToLegacyHttp(error);

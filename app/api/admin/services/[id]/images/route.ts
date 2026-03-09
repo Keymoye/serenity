@@ -7,6 +7,7 @@ import {
   listServiceImagesAdmin,
 } from "@/lib/application/admin.service";
 import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
+import { serviceImageAddSchema, serviceImageDeleteSchema } from "@/lib/utils/validation";
 
 export async function GET(
   request: NextRequest,
@@ -45,15 +46,15 @@ export async function POST(
     }
     const context = { userId: current.user.id, role: current.profile.role };
     const body = await request.json();
-    const { image_url, sort_order } = body;
-    if (!image_url || typeof image_url !== "string") {
+    const parsed = serviceImageAddSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "image_url is required" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
     const image = await addServiceImageAdmin(
-      { service_id: id, image_url, sort_order },
+      { service_id: id, image_url: parsed.data.image_url, sort_order: parsed.data.sort_order || undefined },
       context
     );
     return NextResponse.json({ image }, { status: 201 });
@@ -78,14 +79,14 @@ export async function DELETE(
     }
     const context = { userId: current.user.id, role: current.profile.role };
     const body = await request.json();
-    const { image_id } = body;
-    if (!image_id) {
+    const parsed = serviceImageDeleteSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "image_id is required" },
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
-    await deleteServiceImageAdmin(image_id, id, context);
+    await deleteServiceImageAdmin(parsed.data.image_id, id, context);
     return NextResponse.json({ success: true });
   } catch (error) {
     const { status: errStatus, body: errBody } = mapErrorToLegacyHttp(error);
