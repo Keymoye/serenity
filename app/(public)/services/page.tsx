@@ -74,7 +74,24 @@ export default async function ServicesPage({ searchParams }: ServicesPageProps) 
         )}
 
         {services.length === 0 ? (
-          <p className="text-sm text-slate-600">No services are available at the moment. Please check back soon.</p>
+          <div className="text-center py-12 space-y-3">
+            <p className="slate-700 font-medium">
+              No services available right now.
+            </p>
+            <p className="text-sm text-slate-500">
+              We&apos;re updating our offerings.
+              Please check back soon or contact
+              us for assistance.
+            </p>
+            <a href="/contact"
+               className="inline-block mt-2
+                          rounded-full border
+                          border-slate-300 px-4 py-1.5
+                          text-sm text-slate-700
+                          hover:bg-slate-50">
+              Contact us
+            </a>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => (

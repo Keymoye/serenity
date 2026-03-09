@@ -103,9 +103,28 @@ export default function AdminServicesPage() {
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-3 py-4 text-sm text-slate-600"
+                    className="px-3 py-8"
                   >
-                    No services defined yet.
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-slate-600">
+                        No services yet.
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Add your first service to start
+                        accepting bookings.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setEditingService(null)
+                          setShowForm(true)
+                        }}
+                        className="mt-2 rounded-full bg-slate-900
+                                   px-4 py-1.5 text-xs font-medium
+                                   text-white hover:bg-slate-700"
+                      >
+                        Add service
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (

@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { logger } from "@/lib/utils/logger";
 import type { AdminServiceInput } from "@/lib/utils/validation";
+import { adminServiceSchema } from "@/lib/utils/validation";
 
 type ServiceFormInput = AdminServiceInput & { id?: string };
 
@@ -33,6 +34,7 @@ export default function ServiceForm({ initial, onSaved }: Props) {
   const [uploadingGallery, setUploadingGallery] = 
     useState(false)
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [allTherapists, setAllTherapists] = useState<
     Array<{ id: string; name: string; title: string | null }>
   >([]);
@@ -84,8 +86,23 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    const payload = { name, category: category || null, duration_minutes: duration ? Number(duration) : null, price: price ? Number(price) : null, is_active: isActive, description: description || null, therapistIds: selectedTherapistIds };
+    
+    const parsed = adminServiceSchema.safeParse(payload);
+    if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string
+        if (field) errs[field] = issue.message
+      })
+      setFieldErrors(errs)
+      setLoading(false)
+      return
+    }
+    setFieldErrors({})
+    
     try {
-      const payload = { name, category: category || null, duration_minutes: duration ? Number(duration) : null, price: price ? Number(price) : null, is_active: isActive, description: description || null, therapistIds: selectedTherapistIds };
       if (initial?.id) {
         await apiFetch(`/api/admin/services`, {
           method: "PUT",
@@ -152,24 +169,74 @@ export default function ServiceForm({ initial, onSaved }: Props) {
     <form onSubmit={submit} className="space-y-3">
       {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
       <div>
-        <label className="block text-sm font-medium text-slate-700">Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+        <label htmlFor="name" className="block text-sm font-medium text-slate-700">Name</label>
+        <input 
+          id="name"
+          value={name} 
+          onChange={(e) => {
+            setName(e.target.value)
+            if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: '' }))
+          }} 
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+            fieldErrors.name 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-gray-200 focus:ring-stone-300'
+          }`}
+          aria-describedby={fieldErrors.name ? "name-error" : undefined}
+        />
+        {fieldErrors.name && (
+          <p id="name-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.name}
+          </p>
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Category</label>
-        <input value={category ?? ""} onChange={(e) => setCategory(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+        <label htmlFor="category" className="block text-sm font-medium text-slate-700">Category</label>
+        <input 
+          id="category"
+          value={category ?? ""} 
+          onChange={(e) => {
+            setCategory(e.target.value)
+            if (fieldErrors.category) setFieldErrors(prev => ({ ...prev, category: '' }))
+          }} 
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+            fieldErrors.category 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-gray-200 focus:ring-stone-300'
+          }`}
+          aria-describedby={fieldErrors.category ? "category-error" : undefined}
+        />
+        {fieldErrors.category && (
+          <p id="category-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.category}
+          </p>
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-stone-700">
+        <label htmlFor="description" className="block text-sm font-medium text-stone-700">
           Description
         </label>
         <textarea
+          id="description"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => {
+            setDescription(e.target.value)
+            if (fieldErrors.description) setFieldErrors(prev => ({ ...prev, description: '' }))
+          }}
           rows={3}
           placeholder="Describe this service..."
-          className="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 resize-none ${
+            fieldErrors.description 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-stone-200 focus:ring-stone-300'
+          }`}
+          aria-describedby={fieldErrors.description ? "description-error" : undefined}
         />
+        {fieldErrors.description && (
+          <p id="description-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.description}
+          </p>
+        )}
       </div>
 
       {/* Gallery images */}
@@ -263,12 +330,51 @@ export default function ServiceForm({ initial, onSaved }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Duration (mins)</label>
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} type="number" className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+          <label htmlFor="duration" className="block text-sm font-medium text-slate-700">Duration (mins)</label>
+          <input 
+            id="duration"
+            value={duration} 
+            onChange={(e) => {
+              setDuration(e.target.value)
+              if (fieldErrors.duration_minutes) setFieldErrors(prev => ({ ...prev, duration_minutes: '' }))
+            }} 
+            type="number" 
+            className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.duration_minutes 
+                ? 'border-red-400 focus:ring-red-300' 
+                : 'border-gray-200 focus:ring-stone-300'
+            }`}
+            aria-describedby={fieldErrors.duration_minutes ? "duration-error" : undefined}
+          />
+          {fieldErrors.duration_minutes && (
+            <p id="duration-error" className="mt-1 text-xs text-red-600" role="alert">
+              {fieldErrors.duration_minutes}
+            </p>
+          )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700">Price</label>
-          <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+          <label htmlFor="price" className="block text-sm font-medium text-slate-700">Price</label>
+          <input 
+            id="price"
+            value={price} 
+            onChange={(e) => {
+              setPrice(e.target.value)
+              if (fieldErrors.price) setFieldErrors(prev => ({ ...prev, price: '' }))
+            }} 
+            type="number" 
+            step="0.01" 
+            className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.price 
+                ? 'border-red-400 focus:ring-red-300' 
+                : 'border-gray-200 focus:ring-stone-300'
+            }`}
+            aria-describedby={fieldErrors.price ? "price-error" : undefined}
+          />
+          {fieldErrors.price && (
+            <p id="price-error" className="mt-1 text-xs text-red-600" role="alert">
+              {fieldErrors.price}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2">

@@ -166,7 +166,15 @@ export default function AdminBookingsPage() {
         ) : error ? (
           <div className="text-sm text-red-600">{error}</div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="No bookings" message="No bookings match your filters." />
+          <div className="text-center py-8">
+            <p className="text-sm text-slate-600">
+              No bookings found.
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Try adjusting your filters or check
+              back when customers start booking.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="min-w-full divide-y divide-slate-200 text-sm">

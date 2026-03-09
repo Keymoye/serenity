@@ -29,8 +29,12 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-            No image
+          <div 
+            className="flex h-full w-full items-center justify-center text-xs text-slate-400"
+            role="img"
+            aria-label={`No image available for ${name}`}
+          >
+            <span aria-hidden="true">No image</span>
           </div>
         )}
       </div>

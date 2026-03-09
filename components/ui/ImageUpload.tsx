@@ -182,6 +182,14 @@ export function ImageUpload({
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           onClick={onClick}
+          aria-label="Upload image — click or drag and drop a file here"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              inputRef.current?.click()
+            }
+          }}
           onDragOver={(e) => {
             e.preventDefault()
             setIsDragging(true)

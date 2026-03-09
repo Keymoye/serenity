@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { logger } from "@/lib/utils/logger";
 import type { AdminTherapistInput } from "@/lib/utils/validation";
+import { adminTherapistSchema } from "@/lib/utils/validation";
 
 type TherapistFormInput = AdminTherapistInput & { id?: string };
 
@@ -23,6 +24,7 @@ export default function TherapistForm({ initial, onSaved }: Props) {
   const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [allServices, setAllServices] = useState<
     Array<{ id: string; name: string; category: string | null }>
   >([]);
@@ -68,8 +70,23 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    const payload = { name, title, photo_url: photoUrl, bio_short: bio, is_active: Boolean(isActive), serviceIds: selectedServiceIds };
+    
+    const parsed = adminTherapistSchema.safeParse(payload);
+    if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string
+        if (field) errs[field] = issue.message
+      })
+      setFieldErrors(errs)
+      setLoading(false)
+      return
+    }
+    setFieldErrors({})
+    
     try {
-      const payload = { name, title, photo_url: photoUrl, bio_short: bio, is_active: Boolean(isActive), serviceIds: selectedServiceIds };
       if (initial?.id) {
         await apiFetch(`/api/admin/therapists`, {
           method: "PUT",
@@ -81,10 +98,10 @@ export default function TherapistForm({ initial, onSaved }: Props) {
       }
       // Call parent callback to refresh list or close modal
       onSaved?.();
-      setLoading(false);
     } catch (err: unknown) {
       logger.error('Failed to save therapist', err);
       setError(err instanceof Error ? err.message : "Failed to save therapist");
+    } finally {
       setLoading(false);
     }
   };
@@ -93,16 +110,48 @@ export default function TherapistForm({ initial, onSaved }: Props) {
     <form onSubmit={submit} className="space-y-2">
       {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
       <div>
-        <label className="block text-sm font-medium text-slate-700">Name</label>
+        <label htmlFor="name" className="block text-sm font-medium text-slate-700">Name</label>
         <input
+          id="name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-200 shadow-sm"
+          onChange={(e) => {
+            setName(e.target.value)
+            if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: '' }))
+          }}
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+            fieldErrors.name 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-gray-200 focus:ring-stone-300'
+          }`}
+          aria-describedby={fieldErrors.name ? "name-error" : undefined}
         />
+        {fieldErrors.name && (
+          <p id="name-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.name}
+          </p>
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Title</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm" />
+        <label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label>
+        <input 
+          id="title"
+          value={title} 
+          onChange={(e) => {
+            setTitle(e.target.value)
+            if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: '' }))
+          }} 
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+            fieldErrors.title 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-gray-200 focus:ring-stone-300'
+          }`}
+          aria-describedby={fieldErrors.title ? "title-error" : undefined}
+        />
+        {fieldErrors.title && (
+          <p id="title-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.title}
+          </p>
+        )}
       </div>
       <div>
         <ImageUpload
@@ -115,13 +164,27 @@ export default function TherapistForm({ initial, onSaved }: Props) {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Bio</label>
+        <label htmlFor="bio" className="block text-sm font-medium text-slate-700">Bio</label>
         <textarea
+          id="bio"
           value={bio ?? ""}
-          onChange={(e) => setBio(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-200 shadow-sm"
+          onChange={(e) => {
+            setBio(e.target.value)
+            if (fieldErrors.bio_short) setFieldErrors(prev => ({ ...prev, bio_short: '' }))
+          }}
+          className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+            fieldErrors.bio_short 
+              ? 'border-red-400 focus:ring-red-300' 
+              : 'border-gray-200 focus:ring-stone-300'
+          }`}
           rows={3}
+          aria-describedby={fieldErrors.bio_short ? "bio-error" : undefined}
         />
+        {fieldErrors.bio_short && (
+          <p id="bio-error" className="mt-1 text-xs text-red-600" role="alert">
+            {fieldErrors.bio_short}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-2 text-sm">

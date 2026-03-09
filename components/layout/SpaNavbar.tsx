@@ -19,7 +19,7 @@ export function SpaNavbar({ current }: SpaNavbarProps) {
           <span className="text-base font-semibold tracking-tight">Serenity Spa</span>
         </Link>
 
-        <nav className="hidden items-center gap-4 text-sm text-slate-700 md:flex">
+        <nav aria-label="Main navigation" className="hidden items-center gap-4 text-sm text-slate-700 md:flex">
           <Link href="/services" className="hover:text-sky-700">Services</Link>
           <Link href="/about" className="hover:text-sky-700">About</Link>
           <Link href="/contact" className="hover:text-sky-700">Contact</Link>

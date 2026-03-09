@@ -25,10 +25,14 @@ function LoginContent() {
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [values, setValues] = useState<LoginInput>(INITIAL_VALUES);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: keyof LoginInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues((v) => ({ ...v, [field]: event.target.value }));
+      if (fieldErrors[field]) {
+        setFieldErrors(prev => ({ ...prev, [field]: '' }));
+      }
     };
 
   const handleMagicLinkSubmit = async (event: React.FormEvent) => {
@@ -56,9 +60,16 @@ function LoginContent() {
 
     const parsed = loginSchema.safeParse(values);
     if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string
+        if (field) errs[field] = issue.message
+      })
+      setFieldErrors(errs)
       setError(parsed.error.issues[0]?.message || "Invalid input.");
       return;
     }
+    setFieldErrors({})
 
     const success = await call(async () =>
       postJson("/api/auth/login", parsed.data)
@@ -101,11 +112,13 @@ function LoginContent() {
 
           <OAuthButtons />
 
-          {error && (
-            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <div aria-live="polite" role="alert">
+            {error && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+          </div>
 
           {/* Tab Navigation */}
           <div className="mb-6 flex gap-2 border-b border-slate-200">
@@ -153,8 +166,12 @@ function LoginContent() {
                     type="email"
                     autoComplete="email"
                     value={magicLinkEmail}
-                    onChange={(e) => setMagicLinkEmail(e.target.value)}
+                    onChange={(e) => {
+                      setMagicLinkEmail(e.target.value)
+                      if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }))
+                    }}
                     required
+                    error={fieldErrors.email}
                   />
                   <Button
                     type="submit"
@@ -180,6 +197,7 @@ function LoginContent() {
                 value={values.email}
                 onChange={handleChange("email")}
                 required
+                error={fieldErrors.email}
               />
 
               <Input
@@ -190,6 +208,7 @@ function LoginContent() {
                 value={values.password}
                 onChange={handleChange("password")}
                 required
+                error={fieldErrors.password}
               />
 
               <Button type="submit" variant="primary" loading={loading} className="w-full">

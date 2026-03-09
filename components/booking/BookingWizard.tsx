@@ -351,11 +351,13 @@ export function BookingWizard({
       </div>
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}
-      {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <div aria-live="polite" role="alert">
+        {error && (
+          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+      </div>
 
       {/* ── Step content ───────────────────────────────────────────────────── */}
       <div key={step} className="transition-opacity duration-300">

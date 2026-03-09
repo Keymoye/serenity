@@ -27,10 +27,14 @@ export default function RegisterPage() {
   const { loading, error, call, setError } = useApi();
   const [values, setValues] = useState<RegisterInput>(INITIAL_VALUES);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: keyof RegisterInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues((v) => ({ ...v, [field]: event.target.value }));
+      if (fieldErrors[field]) {
+        setFieldErrors(prev => ({ ...prev, [field]: '' }));
+      }
     };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -40,9 +44,16 @@ export default function RegisterPage() {
 
     const parsed = registerSchema.safeParse(values);
     if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string
+        if (field) errs[field] = issue.message
+      })
+      setFieldErrors(errs)
       setError(parsed.error.issues[0]?.message || "Invalid input.");
       return;
     }
+    setFieldErrors({})
 
     const res = await call(async () => postJson("/api/auth/register", parsed.data));
 
@@ -68,11 +79,13 @@ export default function RegisterPage() {
 
           <OAuthButtons />
 
-          {error && (
-            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <div aria-live="polite" role="alert">
+            {error && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+          </div>
 
           {success && (
             <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -89,6 +102,7 @@ export default function RegisterPage() {
               value={values.name}
               onChange={handleChange("name")}
               required
+              error={fieldErrors.name}
             />
 
             <Input
@@ -99,6 +113,7 @@ export default function RegisterPage() {
               value={values.email}
               onChange={handleChange("email")}
               required
+              error={fieldErrors.email}
             />
 
             <Input
@@ -108,6 +123,7 @@ export default function RegisterPage() {
               autoComplete="tel"
               value={values.phone ?? ""}
               onChange={handleChange("phone")}
+              error={fieldErrors.phone}
             />
 
             <Input
@@ -118,6 +134,7 @@ export default function RegisterPage() {
               value={values.password}
               onChange={handleChange("password")}
               required
+              error={fieldErrors.password}
             />
 
             <Input
@@ -128,6 +145,7 @@ export default function RegisterPage() {
               value={values.confirmPassword}
               onChange={handleChange("confirmPassword")}
               required
+              error={fieldErrors.confirmPassword}
             />
 
             <Button type="submit" variant="primary" loading={loading} className="w-full">

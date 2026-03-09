@@ -118,7 +118,25 @@ export default function AdminTherapistsPage() {
                 </tr>
               ) : therapists.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-sm text-slate-600">No therapists defined yet.</td>
+                  <td colSpan={5} className="px-3 py-8">
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-slate-600">
+                        No therapists yet.
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Add your first therapist to start
+                        accepting bookings.
+                      </p>
+                      <button
+                        onClick={() => setShowForm(true)}
+                        className="mt-2 rounded-full bg-slate-900
+                                   px-4 py-1.5 text-xs font-medium
+                                   text-white hover:bg-slate-700"
+                      >
+                        Add therapist
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 therapists.map((t) => (
