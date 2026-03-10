@@ -8,6 +8,8 @@ import { PageHero } from "@/components/layout/PageHero";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import CancelBookingButton from "@/components/booking/CancelBookingButton";
+import { Avatar } from "@/components/ui/Avatar";
+import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
 
 type BookingRow = {
   id: string;
@@ -19,22 +21,6 @@ type BookingRow = {
   therapists: { name: string }[] | null;
 };
 
-async function getCustomerBookings(profileId: string, userId: string): Promise<BookingRow[]> {
-  try {
-    const rows = await listCustomerBookings({
-      userId: userId ?? undefined,
-      customerProfileId: profileId,
-    });
-    // shape verified against listCustomerBookingRows query in booking.repo.ts
-    return (rows ?? []) as BookingRow[];
-  } catch (error) {
-    logger.error("Unexpected error while loading customer bookings", error, {
-      profileId,
-      userId,
-    });
-    throw error;
-  }
-}
 
 export default async function DashboardPage() {
   const current = await requireCustomer();
@@ -42,8 +28,17 @@ export default async function DashboardPage() {
   if (!current.user?.id) redirect('/auth/login');
 
   let bookings: BookingRow[] = [];
+  let settings = null;
   try {
-    bookings = await getCustomerBookings(current.profile.id, current.user.id);
+    const [bookingsData, settingsData] = await Promise.all([
+      listCustomerBookings({
+        userId: current.user.id,
+        customerProfileId: current.profile.id,
+      }),
+      getPublicSiteSettings(),
+    ]);
+    bookings = bookingsData;
+    settings = settingsData;
   } catch (error) {
     logger.error("Dashboard failed to load bookings", error, {
       profileId: current.profile.id,
@@ -52,7 +47,11 @@ export default async function DashboardPage() {
     return (
       <SectionWrapper>
         <div className="space-y-6">
-          <PageHero title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} subtitle="We're having trouble loading your bookings. Please try refreshing." />
+          <PageHero 
+            title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} 
+            subtitle="We're having trouble loading your bookings. Please try refreshing." 
+            imageSrc={settings?.hero_image_url || undefined}
+          />
           <div className="rounded-2xl bg-red-50 p-6 border border-red-200">
             <p className="text-sm text-red-700">We encountered an error loading your bookings. Please try again later.</p>
           </div>
@@ -147,9 +146,15 @@ export default async function DashboardPage() {
     return (
       <SectionWrapper>
         <div className="space-y-6">
-          <PageHero title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} subtitle="Book your first treatment and start relaxing." ctaLabel="Book now" ctaHref="/book" />
+          <PageHero 
+            title={`Welcome back, ${current.profile?.name?.split(" ")[0] ?? "guest"}`} 
+            subtitle="Book your first treatment and start relaxing." 
+            ctaLabel="Book now" 
+            ctaHref="/book"
+            imageSrc={settings?.hero_image_url || undefined}
+          />
 
-          <EmptyState title="No bookings yet" message="You don’t have any bookings. When you do, they’ll appear here." ctaLabel="Book now" ctaHref="/book" />
+          <EmptyState title="No bookings yet" message="You don't have any bookings. When you do, they'll appear here." ctaLabel="Book now" ctaHref="/book" />
         </div>
       </SectionWrapper>
     );
@@ -158,23 +163,54 @@ export default async function DashboardPage() {
   return (
     <SectionWrapper>
       <div className="space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-semibold text-slate-900">Welcome back, {current.profile?.name?.split(" ")[0] ?? 'Guest'}</h1>
-          <p className="text-sm text-slate-700">Manage your bookings and appointments.</p>
-        </header>
+        {/* Dashboard hero */}
+        <PageHero
+          title={`Welcome back, ${
+            current.profile?.name?.split(" ")[0]
+            ?? 'Guest'
+          }`}
+          subtitle="Your appointments and account"
+          imageSrc={settings?.hero_image_url
+            || undefined}
+        />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Total bookings</p>
-            <p className="text-2xl font-semibold text-slate-900">{total}</p>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Upcoming</p>
-            <p className="text-2xl font-semibold text-slate-900">{upcomingCount}</p>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Last visit</p>
-            <p className="text-2xl font-semibold text-slate-900">{lastVisit ? lastVisit.toLocaleDateString() : '—'}</p>
+        {/* User summary strip */}
+        <div className="mx-auto max-w-2xl px-4
+          -mt-6 relative z-10">
+          <div className="rounded-2xl bg-white
+            shadow-sm border border-slate-100
+            px-6 py-4 flex items-center gap-4">
+            <Avatar
+              src={current.profile?.avatar_url
+                ?? null}
+              name={current.profile?.name ?? ''}
+              size="lg"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold
+                text-slate-900 truncate">
+                {current.profile?.name ?? 'Guest'}
+              </p>
+              <p className="text-xs text-slate-500
+                mt-0.5">
+                {upcomingCount} upcoming
+                {lastVisit
+                  ? ` · Last visit ${
+                        new Date(lastVisit)
+                          .toLocaleDateString(
+                            'en-KE',
+                            { day: 'numeric',
+                              month: 'short',
+                              year: 'numeric' }
+                          )
+                      }`
+                  : ''
+                  }
+                  {' · '}
+                  {total} total booking
+                  {total !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
         </div>
 

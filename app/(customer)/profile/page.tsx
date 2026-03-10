@@ -18,7 +18,13 @@ export default async function ProfilePage() {
         <p className="mb-6 text-sm text-slate-600">Manage your personal information and account security.</p>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <ProfileForm initialName={current.profile.name} initialPhone={current.profile.phone} email={current.user.email ?? ""} />
+          <ProfileForm 
+            initialName={current.profile.name} 
+            initialPhone={current.profile.phone} 
+            initialAvatarUrl={current.profile.avatar_url}
+            profileId={current.profile.id}
+            email={current.user.email ?? ""} 
+          />
           <ChangePasswordForm />
         </div>
       </div>

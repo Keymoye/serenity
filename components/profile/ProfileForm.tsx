@@ -6,17 +6,22 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { pushToast } from "@/components/ui/Toast";
+import { Avatar } from "@/components/ui/Avatar";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface Props {
   initialName?: string | null;
   initialPhone?: string | null;
+  initialAvatarUrl?: string | null;
+  profileId: string;
   email: string;
 }
 
-export default function ProfileForm({ initialName, initialPhone, email }: Props) {
+export default function ProfileForm({ initialName, initialPhone, initialAvatarUrl, profileId, email }: Props) {
   const router = useRouter();
   const [name, setName] = useState(initialName ?? "");
   const [phone, setPhone] = useState(initialPhone ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +31,7 @@ export default function ProfileForm({ initialName, initialPhone, email }: Props)
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, avatar_url: avatarUrl }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
@@ -43,6 +48,24 @@ export default function ProfileForm({ initialName, initialPhone, email }: Props)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
+      {/* Avatar */}
+      <div className="flex flex-col items-center gap-3 mb-6">
+        <Avatar
+          src={avatarUrl}
+          name={initialName ?? ''}
+          size="lg"
+        />
+        <ImageUpload
+          currentUrl={avatarUrl}
+          bucket="avatar-uploads"
+          entityId={profileId}
+          uploadEndpoint="/api/profile/upload"
+          onUpload={(url) => setAvatarUrl(url)}
+          label="Upload profile photo"
+          aspectRatio="square"
+        />
+      </div>
+
       <h3 className="text-sm font-semibold text-slate-900">Profile</h3>
       <div>
         <label className="block text-xs font-medium text-slate-700">Full name</label>

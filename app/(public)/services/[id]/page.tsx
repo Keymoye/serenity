@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import Image from "next/image";
 import type { Service, ServiceImage, TherapistSummary } from "@/lib/domain/service.types";
 import type { Metadata } from "next";
+import { formatPrice } from "@/lib/utils/format";
 
 type ServiceDetailPageProps = {
   params: { id: string };
@@ -78,7 +79,7 @@ export default async function ServiceDetailPage({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">{service.category || "Signature treatment"}</p>
             <div className="flex flex-wrap gap-3 text-sm text-slate-700">
               {service.duration_minutes && (<span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">{service.duration_minutes} minutes</span>)}
-              {service.price != null && (<span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">${service.price.toFixed(2)}</span>)}
+              {service.price != null && (<span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">{formatPrice(service.price)}</span>)}
             </div>
           </div>
         </div>

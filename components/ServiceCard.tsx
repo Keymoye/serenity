@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { formatPrice } from "@/lib/utils/format";
 
 export type ServiceSummary = {
   id: string;
@@ -52,7 +53,7 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
           </h3>
           {price != null && (
             <span className="whitespace-nowrap text-sm font-semibold text-slate-900">
-              ${price.toFixed(2)}
+              {formatPrice(price)}
             </span>
           )}
         </div>

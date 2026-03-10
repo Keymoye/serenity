@@ -5,6 +5,7 @@ import { logger } from "@/lib/utils/logger";
 import { apiFetch } from "@/lib/utils/api";
 import ServiceForm from "@/components/admin/ServiceForm";
 import Image from "next/image";
+import { formatPrice } from "@/lib/utils/format";
 
 type ServiceRow = {
   id: string;
@@ -166,7 +167,7 @@ export default function AdminServicesPage() {
                     </td>
                     <td className="px-3 py-2 text-slate-700">
                       {service.price != null
-                        ? `$${service.price.toFixed(2)}`
+                        ? formatPrice(service.price)
                         : "—"}
                     </td>
                     <td className="px-3 py-2">

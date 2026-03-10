@@ -15,7 +15,7 @@ export const BOOKING_STATUS = {
 } as const
 
 /** Booking rules */
-export const LOCK_TIMEOUT_MS = 10 * 60 * 1000
+export const LOCK_TIMEOUT_MS = 30 * 1000
 export const LATE_CANCELLATION_HOURS = 24
 export const MIN_PASSWORD_LENGTH = 8
 
@@ -25,3 +25,7 @@ export const AUTH_RATE_LIMIT_WINDOW = "15 m"
 
 /** File upload */
 export const MAX_GALLERY_IMAGES = 8
+
+/** Currency */
+export const CURRENCY_LOCALE = 'en-KE'
+export const CURRENCY_CODE = 'KES'

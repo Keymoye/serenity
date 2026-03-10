@@ -9,6 +9,7 @@ import { apiFetch, postJson } from "@/lib/utils/api";
 import { Spinner } from "@/components/ui/Spinner";
 import { pushToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/ui/Avatar";
+import { LOCK_TIMEOUT_MS } from "@/lib/config/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -226,14 +227,18 @@ export function BookingWizard({
     try {
       await postJson("/api/booking/lock", { timeSlotId: slotId });
       setSelectedTimeSlotId(slotId);
-      const expiry = Date.now() + 15 * 60 * 1000;
+      const lockSeconds = LOCK_TIMEOUT_MS / 1000;
+      const lockLabel = lockSeconds >= 60
+        ? `${Math.floor(lockSeconds / 60)} minutes` 
+        : `${lockSeconds} seconds`;
+      const expiry = Date.now() + LOCK_TIMEOUT_MS;
       setLockExpiry(expiry);
       setRemainingSeconds(Math.ceil((expiry - Date.now()) / 1000));
-      pushToast("success", "Time slot locked for 15 minutes");
+      pushToast("success", `Time slot locked for ${lockLabel}`);
     } catch (err: unknown) {
       logger.warn("Slot lock failed", { error: String(err) });
 
-      const bodyCode = (err as { body?: { code?: unknown } } | null)?.body?.code;
+      const bodyCode = (err as { body?: { code?: unknown } | null })?.body?.code;
       if (bodyCode === "SLOT_TAKEN") {
         pushToast("error", "This time slot was just taken. Please choose another slot.");
         setError("This time slot was just taken. Please choose another slot.");

@@ -13,6 +13,7 @@ interface ImageUploadProps {
   label?: string;
   aspectRatio?: "square" | "landscape";
   disabled?: boolean;
+  uploadEndpoint?: string;
 }
 
 export function ImageUpload({
@@ -23,6 +24,7 @@ export function ImageUpload({
   label = "Image",
   aspectRatio = "square",
   disabled = false,
+  uploadEndpoint,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
@@ -97,7 +99,7 @@ export function ImageUpload({
         reject(new Error('Network error'));
       });
 
-      xhr.open('POST', '/api/admin/upload');
+      xhr.open('POST', uploadEndpoint ?? "/api/admin/upload");
       xhr.send(formData);
     });
   }
@@ -111,7 +113,7 @@ export function ImageUpload({
     const filename = parts[parts.length - 1];
 
     try {
-      await fetch('/api/admin/upload', {
+      await fetch(uploadEndpoint ?? "/api/admin/upload", {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
