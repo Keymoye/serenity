@@ -1,3 +1,11 @@
+%% Note: ensureProfile() in profile.repo.ts
+%% uses adminClient — this is the one
+%% exception where infra uses the admin
+%% client on behalf of a user with no
+%% session yet (OAuth callback only).
+%% All other profile operations use
+%% the user client with RLS enforced.
+
 flowchart LR
   FN["requireCustomer()\nrequireAdmin()"]
   SC["getSupabaseServerAuthClient()"]

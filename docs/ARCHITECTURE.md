@@ -121,25 +121,40 @@ NextResponse.json() — HTTP response
 
 ## Auth flow
 
-Request to /admin/* or /dashboard/*
-│
-▼
-middleware.ts reads Supabase session cookie
-│
-┌──┴───────────────┐
-no session          session exists
-│                     │
-▼                  check role
-redirect             ┌───┴───┐
-/auth/login        admin  customer
-│        │
-/admin/*   /dashboard
-/profile   /book
-│        │
-requireAdmin  requireCustomer
-│        │
-403 if not  401 if no
-admin      session
+### Email + password
+User submits /auth/login form └── POST /api/auth/login ├── Rate limit check (Upstash) ├── loginSchema.safeParse(body) └── supabase.auth.signInWithPassword()
+Supabase sets session cookies └── @supabase/ssr handles serialization
+Subsequent requests └── proxy.ts checks session cookie ├── No session → redirect /auth/login └── Not admin on /admin/* → redirect /dashboard
+API routes verify independently └── requireAdmin() / requireCustomer() ├── No session → UnauthorizedError 401 └── Wrong role → ForbiddenError 403
+
+### Google OAuth + Magic link (PKCE flow)
+User clicks "Sign in with Google" or requests a magic link └── supabase.auth.signInWithOAuth({ provider: 'google', redirectTo: NEXT_PUBLIC_APP_URL + '/auth/callback' }) OR supabase.auth.signInWithOtp({ email, emailRedirectTo: NEXT_PUBLIC_APP_URL + '/auth/callback' })
+Supabase redirects to: /auth/callback?code=<pkce_code> &next=/dashboard
+app/auth/callback/route.ts ├── Missing code → redirect │ /auth/login?error=missing_code ├── exchangeCodeForSession(code) │ └── sets session cookies ├── ensureOAuthProfile(user) ← service │ └── auth.service.ts │ └── profileRepo │ .ensureProfile() ← repo │ └── profile.repo.ts │ ├── SELECT — profile exists? │ └── INSERT if missing │ (adminClient — no session │ cookie exists yet) └── redirect to ?next or /dashboard
+Session established └── same flow as email login
+
+**Auth methods supported:**
+- Email + password
+- Magic link (PKCE)
+- Google OAuth (PKCE)
+- Password reset
+
+**Layer rule:** The callback route
+never touches the DB directly.
+All profile logic goes through:
+route → auth.service → profile.repo
+
+**Critical env var:**
+NEXT_PUBLIC_APP_URL must match
+redirect URL registered in both
+Supabase and Google Cloud Console.
+
+### Profile auto-creation:
+- Email/password → handle_new_user()
+  PostgreSQL trigger fires automatically
+- OAuth/magic link → ensureOAuthProfile()
+  called from /auth/callback route handler
+  via auth.service → profile.repo
 
 ### Middleware protected routes:
 ```typescript

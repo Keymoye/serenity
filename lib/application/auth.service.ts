@@ -1,5 +1,6 @@
 import { ValidationError, InternalError } from "../domain/errors";
 import { createAuthRepository, type AuthRepository } from "../infra/supabase/auth.repo";
+import { createProfileRepository } from "../infra/supabase/profile.repo";
 import { MIN_PASSWORD_LENGTH } from "../config/constants";
 
 export interface AuthDependencies {
@@ -112,5 +113,39 @@ export async function sendMagicLink(
   } catch (error) {
     throw new InternalError("MAGIC_LINK_FAILED", "Unable to send magic link. Please try again.", { error });
   }
+}
+
+/**
+ * Ensures a profile row exists for a
+ * user authenticated via OAuth or magic
+ * link. Called from /auth/callback after
+ * exchangeCodeForSession succeeds.
+ *
+ * The DB trigger handles email signups
+ * but OAuth users may arrive without a
+ * profile row — this upserts defensively.
+ *
+ * @param user - Supabase User object
+ */
+export async function ensureOAuthProfile(
+  user: {
+    id: string
+    email?: string
+    user_metadata?: Record<string, unknown>
+  }
+): Promise<void> {
+  const profileRepo = createProfileRepository();
+
+  const name =
+    (user.user_metadata?.full_name as string | undefined)
+    ?? (user.user_metadata?.name as string | undefined)
+    ?? user.email
+    ?? "Guest";
+
+  await profileRepo.ensureProfile({
+    id: user.id,
+    name,
+    role: "customer",
+  });
 }
 

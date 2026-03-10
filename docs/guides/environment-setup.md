@@ -43,8 +43,17 @@ node --version   # Should be 20+
 3. Enable **Google OAuth** (optional):
    - Get Google OAuth credentials from Google Cloud Console
    - Add Client ID and Client Secret to Supabase
-4. Set site URL: `http://localhost:3000` (development)
-5. Set redirect URLs: `http://localhost:3000/auth/callback`
+4. Set redirect URLs: `http://localhost:3000/auth/callback`
+5. Set site URL: `http://localhost:3000` (development)
+
+### Google OAuth setup
+1. Go to Google Cloud Console → API & Services → Credentials
+2. Create new OAuth client ID
+3. Select "Web application"
+4. Add authorized JavaScript origins: `http://localhost:3000`
+5. Add authorized redirect URIs: `http://localhost:3000/auth/callback`
+6. Copy Client ID and Client Secret
+7. Add Client ID and Client Secret to Supabase
 
 ### Get Supabase credentials
 1. Go to Project Settings → API
@@ -175,7 +184,14 @@ RESEND_ADMIN_EMAIL=admin@yourspa.com
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | - | Supabase Dashboard → Settings → API |
 | `RESEND_API_KEY` | Yes | - | Resend Dashboard → API Keys |
 | `RESEND_FROM_EMAIL` | No | "bookings@serenity.spa" | Resend Dashboard → Domains |
-| `NEXT_PUBLIC_APP_URL` | Yes | - | Your deployed URL (localhost:3000 for dev) |
+| `NEXT_PUBLIC_APP_URL` | ✅ Required |
+| Your app URL — required for OAuth
+and magic link redirectTo |
+
+> Required for OAuth + magic link.
+> Must match redirect URL
+> registered in Supabase and Google
+> Cloud Console.
 | `UPSTASH_REDIS_REST_URL` | No | - | Upstash Dashboard → Database → REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | No | - | Upstash Dashboard → Database → REST Token |
 
@@ -267,6 +283,24 @@ pnpm dev
 ## Troubleshooting
 
 ### Common issues
+
+#### Google OAuth or magic link fails
+- Check NEXT_PUBLIC_APP_URL is set
+  and has no trailing slash
+- Check /auth/callback is in Supabase
+  Authentication → URL Configuration
+  → Redirect URLs
+- For Google: check Client ID + Secret
+  are in Supabase → Providers → Google
+
+### OAuth user gets error after sign-in
+- The DB trigger handle_new_user() only
+  fires for email signups
+- The /auth/callback route creates a
+  profile via ensureOAuthProfile()
+- If profile is still missing: insert
+  manually in Supabase Table Editor
+  with role: 'customer'
 
 #### Supabase connection errors
 **Symptoms:** "Supabase client environment variables are not configured"

@@ -1,8 +1,10 @@
 import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
 
 export interface ProfileRepository {
   updateProfile(profileId: string, payload: { name: string; phone: string | null; avatar_url?: string | null }): Promise<void>;
   findById(userId: string): Promise<import("./currentUser").AppProfile | null>;
+  ensureProfile(payload: { id: string; name: string; role: "customer" | "admin" }): Promise<void>;
 }
 
 export function createProfileRepository(): ProfileRepository {
@@ -29,6 +31,28 @@ export function createProfileRepository(): ProfileRepository {
         .maybeSingle();
       if (error) throw error;
       return (data as import("./currentUser").AppProfile | null) ?? null;
+    },
+
+    async ensureProfile(payload) {
+      const supabase = await getSupabaseAdminClient();
+
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", payload.id)
+        .maybeSingle();
+
+      if (existing) return;
+
+      const { error } = await supabase
+        .from("profiles")
+        .insert({
+          id: payload.id,
+          name: payload.name,
+          role: payload.role,
+        });
+
+      if (error) throw error;
     },
   };
 }

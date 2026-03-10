@@ -165,6 +165,30 @@ const current = await requireAdmin(); // Throws 401 if not logged in, 403 if not
 }
 ```
 
+### GET /auth/callback
+**Auth:** Public  
+**Rate limited:** NO  
+**Schema:** None  
+**Response:** 302 redirect  
+
+**URL params:** | 302 redirect |
+|-------|----------|-------------|
+| code  | ✅ Yes   | PKCE code from Supabase |
+| next  | No       | Redirect path after auth |
+
+**Flow:**
+1. exchangeCodeForSession(code)
+   sets session cookie
+2. ensureOAuthProfile(user)
+   → auth.service → profile.repo
+   → INSERT profile if missing
+3. Redirect to next or /dashboard
+
+**Layer chain:**
+route → auth.service → profile.repo
+→ adminClient
+No direct DB calls in route handler.
+
 ## Public Booking Routes
 
 ### POST /api/booking/availability

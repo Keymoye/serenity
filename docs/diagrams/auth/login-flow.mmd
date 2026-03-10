@@ -1,27 +1,102 @@
+%% Auth flows — email/password,
+%% Google OAuth and magic link
+%% Last updated: Batch 11 (March 2026)
+
 sequenceDiagram
   participant U as User
   participant F as LoginForm
   participant R as POST /api/auth/login
-  participant RL as Rate Limiter
+  participant RL as Upstash Rate Limiter
   participant SB as Supabase Auth
-  participant DB as profiles table
+  participant D as Dashboard
 
-  U->>F: submit email + password
+  Note over U,D: Email + Password flow
+
+  U->>F: email + password
   F->>R: POST { email, password }
-  R->>RL: checkRateLimit(IP + route)
+  R->>RL: checkRateLimit(IP)
   alt over limit
-    RL-->>R: { success: false }
+    RL-->>R: blocked
     R-->>F: 429 RATE_LIMITED
-    F-->>U: "Too many attempts"
+    F-->>U: Too many attempts
   end
   R->>SB: signInWithPassword()
-  alt invalid credentials
+  alt wrong credentials
     SB-->>R: AuthError
-    R-->>F: 401 INVALID_CREDENTIALS
-    F-->>U: "Invalid email or password"
+    R-->>F: 401
+    F-->>U: Invalid credentials
   end
-  SB-->>R: session + user
-  R->>DB: fetch profile (role, name)
-  DB-->>R: profile row
-  R-->>F: 200 { user, session }
-  F-->>U: redirect /dashboard or /admin
+  SB-->>R: session
+  R-->>F: 200
+  F-->>D: redirect
+
+---
+
+sequenceDiagram
+  participant U as User
+  participant OB as OAuthButtons
+  participant SB as Supabase Auth
+  participant G as Google
+  participant CB as /auth/callback
+  participant AS as auth.service.ts
+  participant PR as profile.repo.ts
+  participant DB as profiles table
+  participant D as Dashboard
+
+  Note over U,D: Google OAuth PKCE flow
+
+  U->>OB: Sign in with Google
+  OB->>SB: signInWithOAuth\n{ provider: google,\n  redirectTo: APP_URL/auth/callback }
+  SB-->>OB: redirect URL
+  OB->>G: browser redirects
+  G-->>U: consent screen
+  U->>G: grants permission
+  G->>SB: code
+  SB->>CB: /auth/callback?code=...
+  CB->>SB: exchangeCodeForSession(code)
+  SB-->>CB: user + session cookies set
+  CB->>AS: ensureOAuthProfile(user)
+  AS->>PR: ensureProfile({ id, name, role })
+  PR->>DB: SELECT WHERE id = user.id
+  alt profile exists
+    DB-->>PR: found
+    PR-->>AS: return
+  else new user
+    PR->>DB: INSERT { id, name,\n  role: customer }
+    DB-->>PR: ok
+  end
+  AS-->>CB: void
+  CB->>D: redirect /dashboard
+
+---
+
+sequenceDiagram
+  participant U as User
+  participant ML as Magic Link Form
+  participant R as POST /api/auth/magic-link
+  participant SB as Supabase Auth
+  participant E as Email Inbox
+  participant CB as /auth/callback
+  participant AS as auth.service.ts
+  participant PR as profile.repo.ts
+  participant DB as profiles table
+  participant D as Dashboard
+
+  Note over U,D: Magic link PKCE flow
+
+  U->>ML: enters email
+  ML->>R: POST { email }
+  R->>SB: signInWithOtp\n{ email,\n  emailRedirectTo:\n  APP_URL/auth/callback }
+  SB-->>R: ok
+  R-->>ML: 200
+  ML-->>U: Check your email
+  SB->>E: magic link email
+  U->>E: clicks link
+  E->>CB: /auth/callback?code=...
+  CB->>SB: exchangeCodeForSession(code)
+  SB-->>CB: user + session cookies set
+  CB->>AS: ensureOAuthProfile(user)
+  AS->>PR: ensureProfile({ id, name, role })
+  PR->>DB: SELECT + INSERT if missing
+  AS-->>CB: void
+  CB->>D: redirect /dashboard

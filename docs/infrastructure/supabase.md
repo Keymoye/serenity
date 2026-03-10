@@ -96,6 +96,19 @@ export async function getSupabaseServerAuthClient(
 - Magic link handling
 - Session refresh in middleware
 
+### 4. Profile repository
+**File:** `lib/infra/supabase/profile.repo.ts`
+
+| Method | Client used | Description |
+|--------|-------------|-------------|
+| findById(userId) | user client | Fetch profile by ID |
+| updateProfile(id, payload) | user client | Update name · phone · avatar_url |
+| ensureProfile(payload) | admin client | INSERT profile if not exists — OAuth callback only |
+
+**Note:** ensureProfile() uses adminClient because
+user has no session cookie yet at
+the point /auth/callback runs.
+
 ## Database schema
 
 ### profiles
@@ -302,6 +315,14 @@ $$ language plpgsql security definer;
 **Purpose:** Automatically creates a profile row when a user signs up via Supabase Auth
 **Behavior:** Sets role to 'customer' and name to email address
 
+> ⚠️ This trigger fires for
+> email/password signups only.
+> OAuth and magic link users are
+> handled by ensureOAuthProfile()
+> in lib/application/auth.service.ts
+> which calls profileRepo.ensureProfile()
+> from the /auth/callback route.
+
 ### try_lock_slot()
 ```sql
 create or replace function public.try_lock_slot(
@@ -433,8 +454,14 @@ await supabase.auth.signInWithOAuth({
 1. User clicks magic link or OAuth authorization
 2. Supabase redirects to `/auth/callback` with auth code
 3. Callback route exchanges code for session
-4. Session cookies set automatically by `@supabase/ssr`
-5. User redirected to intended destination
+4. Calls ensureOAuthProfile(user)
+   via auth.service → profile.repo
+5. Session cookies set automatically by `@supabase/ssr`
+6. User redirected to intended destination
+
+**Architecture:** Route never queries DB directly.
+All profile logic goes through:
+route → auth.service → profile.repo → adminClient
 
 ```typescript
 export async function GET(request: NextRequest) {
