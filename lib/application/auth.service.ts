@@ -134,6 +134,10 @@ export async function ensureOAuthProfile(
     user_metadata?: Record<string, unknown>
   }
 ): Promise<void> {
+  if (!user.id || typeof user.id !== "string" || user.id.trim() === "") {
+    throw new ValidationError("User ID is required for profile creation.");
+  }
+
   const profileRepo = createProfileRepository();
 
   const name =

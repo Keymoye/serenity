@@ -36,21 +36,19 @@ export function createProfileRepository(): ProfileRepository {
     async ensureProfile(payload) {
       const supabase = await getSupabaseAdminClient();
 
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", payload.id)
-        .maybeSingle();
-
-      if (existing) return;
-
       const { error } = await supabase
         .from("profiles")
-        .insert({
-          id: payload.id,
-          name: payload.name,
-          role: payload.role,
-        });
+        .upsert(
+          {
+            id: payload.id,
+            name: payload.name,
+            role: payload.role,
+          },
+          {
+            onConflict: "id",
+            ignoreDuplicates: true,
+          }
+        );
 
       if (error) throw error;
     },

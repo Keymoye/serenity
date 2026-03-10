@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  // Validate next param — prevent open redirect. Must start with /
-  const redirectTo = next.startsWith("/") ? next : "/dashboard";
+  // Validate next param — prevent open redirect. Must start with / and contain no backslashes
+  const redirectTo = next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/dashboard";
 
   if (!code) {
     // No code = direct visit or error
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    logger.error("Auth callback exchange failed", error);
+    logger.error("Auth callback exchange failed", error, { userId: data.user?.id });
     return NextResponse.redirect(
       new URL("/auth/login?error=auth_failed", origin)
     );
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   try {
     await ensureOAuthProfile(data.user);
   } catch (profileError) {
-    logger.error("Profile ensure failed in callback", profileError);
+    logger.error("Profile ensure failed in callback", profileError, { userId: data.user.id });
     // Non-blocking — do not prevent login
   }
 
