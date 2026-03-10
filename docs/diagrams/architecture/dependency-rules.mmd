@@ -1,0 +1,40 @@
+graph LR
+  UI["UI / Components"]
+  API["app/api/ Route Handlers"]
+  APP["lib/application/ Services"]
+  INFRA["lib/infra/ Repos"]
+  DOM["lib/domain/ Types + Errors"]
+  CFG["lib/config/ Constants"]
+  UTL["lib/utils/ Utilities"]
+
+  UI -->|allowed| API
+  UI -->|allowed| DOM
+  UI -->|allowed| UTL
+  API -->|allowed| APP
+  API -->|allowed| DOM
+  API -->|allowed| UTL
+  APP -->|allowed| INFRA
+  APP -->|allowed| DOM
+  APP -->|allowed| CFG
+  INFRA -->|allowed| DOM
+  INFRA -->|allowed| CFG
+
+  UI -. "❌ forbidden" .-> INFRA
+  API -. "❌ forbidden" .-> INFRA
+  APP -. "❌ no HTTP" .-> API
+
+  linkStyle 0 stroke:#22c55e,stroke-width:2px
+  linkStyle 1 stroke:#22c55e,stroke-width:2px
+  linkStyle 2 stroke:#22c55e,stroke-width:2px
+  linkStyle 3 stroke:#22c55e,stroke-width:2px
+  linkStyle 4 stroke:#22c55e,stroke-width:2px
+  linkStyle 5 stroke:#22c55e,stroke-width:2px
+  linkStyle 6 stroke:#22c55e,stroke-width:2px
+  linkStyle 7 stroke:#22c55e,stroke-width:2px
+  linkStyle 8 stroke:#22c55e,stroke-width:2px
+  linkStyle 9 stroke:#22c55e,stroke-width:2px
+  linkStyle 10 stroke:#22c55e,stroke-width:2px
+  linkStyle 11 stroke:#22c55e,stroke-width:2px
+  linkStyle 12 stroke:#ef4444,stroke-width:2px,stroke-dasharray: 5 5
+  linkStyle 13 stroke:#ef4444,stroke-width:2px,stroke-dasharray: 5 5
+  linkStyle 14 stroke:#ef4444,stroke-width:2px,stroke-dasharray: 5 5

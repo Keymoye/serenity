@@ -1,0 +1,12 @@
+flowchart TD
+  LOGIN["Admin logs in\n/auth/login"]
+  DASH["Admin Dashboard\n/admin\nMetrics: bookings this month\nupcoming today · revenue\ncustomers · messages"]
+
+  DASH --> SVC["Services\n/admin/services\nCreate · Edit · Delete\nGallery management"]
+  DASH --> THR["Therapists\n/admin/therapists\nCreate · Edit · Delete\nPhoto upload"]
+  DASH --> BOOK["Bookings\n/admin/bookings\nFilter · Update status\nDelete"]
+  DASH --> SCHED["Schedule\n/admin/schedule\nView time slots by therapist\nCreate · Delete slots"]
+  DASH --> MSGS["Messages\n/admin/messages\nCustomer contact submissions"]
+  DASH --> SETS["Settings\n/admin/settings\nSpa name · tagline\nHero image · About\nContact · Social links\nOpening hours · Map"]
+
+  LOGIN --> DASH

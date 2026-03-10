@@ -1,0 +1,26 @@
+flowchart TD
+  REQ["Incoming Request"]
+  MID["middleware.ts\nread Supabase session cookie"]
+  SESS{Session\nexists?}
+  ROLE{Role?}
+  ADMIN["Route: /admin/*"]
+  CUST["Route: /dashboard\n/profile · /book"]
+  RA["requireAdmin()"]
+  RC["requireCustomer()"]
+  PASS["Request proceeds\nto route handler"]
+  R403["403 ForbiddenError"]
+  R401["Redirect /auth/login"]
+  LOGIN["Redirect /auth/login"]
+
+  REQ --> MID
+  MID --> SESS
+  SESS -->|no| LOGIN
+  SESS -->|yes| ROLE
+  ROLE -->|admin| ADMIN
+  ROLE -->|customer| CUST
+  ADMIN --> RA
+  CUST --> RC
+  RA -->|not admin| R403
+  RA -->|admin| PASS
+  RC -->|no session| R401
+  RC -->|ok| PASS

@@ -1,0 +1,21 @@
+flowchart TD
+  REQ["DB Query arrives"]
+  WHO{Who is\nquerying?}
+
+  SA["Supabase Admin Client\nservice_role key\nBYPASSES all RLS"]
+  UC["Supabase User Client\nanon/user key\nRLS enforced"]
+
+  PROF["profiles\nSELECT: own row only\nUPDATE: own row only"]
+  BOOK["bookings\nSELECT: own rows only\nINSERT: own rows\nDELETE: own rows"]
+  TS["time_slots\nSELECT: public\nINSERT/UPDATE: admin only"]
+  SVC["services\nSELECT: public\nINSERT/UPDATE/DELETE: admin only"]
+  THR["therapists\nSELECT: public\nINSERT/UPDATE/DELETE: admin only"]
+
+  REQ --> WHO
+  WHO -->|admin server routes| SA
+  WHO -->|customer client| UC
+  UC --> PROF
+  UC --> BOOK
+  UC --> TS
+  UC --> SVC
+  UC --> THR

@@ -1,0 +1,19 @@
+flowchart LR
+  FN["requireCustomer()\nrequireAdmin()"]
+  SC["getSupabaseServerAuthClient()"]
+  SB["Supabase Auth\ngetUser()"]
+  U{User\nexists?}
+  PR["fetch profile\nfrom profiles table"]
+  RL{role ===\n'admin'?}
+  OK["return { user, profile }"]
+  UE["throw UnauthorizedError\n→ 401"]
+  FE["throw ForbiddenError\n→ 403"]
+
+  FN --> SC
+  SC --> SB
+  SB --> U
+  U -->|no| UE
+  U -->|yes| PR
+  PR --> RL
+  RL -->|requireAdmin + not admin| FE
+  RL -->|ok| OK

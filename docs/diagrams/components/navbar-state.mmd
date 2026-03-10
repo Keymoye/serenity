@@ -1,0 +1,11 @@
+flowchart TD
+  NAV["SpaNavbar"]
+  AUTH{User\nauthenticated?}
+  PUB["Public nav\nHome · Services\nTherapists · Contact"]
+  CUST["Customer nav\nHome · Services · Book\nAvatar → /profile\nLogout"]
+  ADMIN["Admin nav\nSidebar navigation\n(AdminSidebar component)"]
+
+  NAV --> AUTH
+  AUTH -->|no| PUB
+  AUTH -->|customer| CUST
+  AUTH -->|admin| ADMIN

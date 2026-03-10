@@ -1,0 +1,6 @@
+flowchart TD
+  PUB["🌐 Public\nNo auth required\n/api/auth/* · /api/settings\n/api/contact · /api/services\n/api/booking/availability"]
+  CUST["👤 Customer\nValid session required\nrequireCustomer()\n/api/booking/* · /api/profile/*"]
+  ADMIN["🔐 Admin\nSession + role = admin\nrequireAdmin()\n/api/admin/**"]
+
+  PUB --> CUST --> ADMIN

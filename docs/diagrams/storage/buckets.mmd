@@ -1,0 +1,14 @@
+flowchart LR
+  subgraph "Supabase Storage Buckets"
+    SH["spa-hero\nHero/banner images\nAdmin only upload\nPublic read"]
+    SA["spa-about\nAbout section images\nAdmin only upload\nPublic read"]
+    SI["service-images\nService gallery photos\nAdmin only upload\nPublic read"]
+    TP["therapist-photos\nTherapist profile photos\nAdmin only upload\nPublic read"]
+    AV["avatar-uploads\nCustomer profile photos\nCustomer upload\nPublic read"]
+  end
+
+  ADMIN["Admin\nPOST /api/admin/upload"] --> SH
+  ADMIN --> SA
+  ADMIN --> SI
+  ADMIN --> TP
+  CUST["Customer\nPOST /api/profile/upload"] --> AV

@@ -1,0 +1,14 @@
+flowchart TD
+  REQ["POST /api/auth/login\nor register · magic-link\nreset-password"]
+  CRL["checkRateLimit(identifier)\nidentifier = IP + route path"]
+  UPS["Upstash Redis\nsliding window check\n10 requests / 15 minutes"]
+  RES{Result}
+  ALLOW["{ success: true }\nroute handler continues"]
+  BLOCK["{ success: false }\nHTTP 429\n{ error: Too many requests\n  code: RATE_LIMITED }"]
+  DOWN["Redis unavailable\n(network / timeout)"]
+  DEG["Graceful degrade\n{ success: true }\nroute continues\nnever blocks on Redis failure"]
+
+  REQ --> CRL --> UPS --> RES
+  RES -->|under limit| ALLOW
+  RES -->|over limit| BLOCK
+  UPS -->|connection error| DOWN --> DEG

@@ -1,0 +1,27 @@
+sequenceDiagram
+  participant U as User
+  participant F as LoginForm
+  participant R as POST /api/auth/login
+  participant RL as Rate Limiter
+  participant SB as Supabase Auth
+  participant DB as profiles table
+
+  U->>F: submit email + password
+  F->>R: POST { email, password }
+  R->>RL: checkRateLimit(IP + route)
+  alt over limit
+    RL-->>R: { success: false }
+    R-->>F: 429 RATE_LIMITED
+    F-->>U: "Too many attempts"
+  end
+  R->>SB: signInWithPassword()
+  alt invalid credentials
+    SB-->>R: AuthError
+    R-->>F: 401 INVALID_CREDENTIALS
+    F-->>U: "Invalid email or password"
+  end
+  SB-->>R: session + user
+  R->>DB: fetch profile (role, name)
+  DB-->>R: profile row
+  R-->>F: 200 { user, session }
+  F-->>U: redirect /dashboard or /admin

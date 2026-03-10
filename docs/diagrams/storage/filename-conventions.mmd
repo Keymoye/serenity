@@ -1,0 +1,9 @@
+flowchart TD
+  subgraph "Filename patterns by bucket"
+    SH["spa-hero\nhero-main.{ext}"]
+    SI["service-images\n{entityId}-{timestamp}.{ext}"]
+    TP["therapist-photos\n{entityId}-{timestamp}.{ext}"]
+    AV["avatar-uploads\navatar-{userId}-{timestamp}.{ext}"]
+  end
+
+  NOTE["All filenames:\n- lowercase\n- no spaces\n- include timestamp\n  to bust CDN cache"]

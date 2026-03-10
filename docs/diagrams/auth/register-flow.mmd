@@ -1,0 +1,18 @@
+sequenceDiagram
+  participant U as User
+  participant F as RegisterForm
+  participant R as POST /api/auth/register
+  participant RL as Rate Limiter
+  participant SB as Supabase Auth
+  participant DB as profiles table
+
+  U->>F: name + email + password
+  F->>R: POST { name, email, password }
+  R->>RL: checkRateLimit(IP + route)
+  R->>R: registerSchema.parse(body)
+  R->>SB: signUp({ email, password })
+  SB-->>R: new user
+  R->>DB: INSERT profiles\n{ id, name, role: customer }
+  DB-->>R: profile created
+  R-->>F: 201 { user }
+  F-->>U: redirect /dashboard

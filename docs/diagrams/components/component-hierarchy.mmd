@@ -1,0 +1,29 @@
+flowchart TD
+  subgraph "Layout"
+    NAV["SpaNavbar\nLogo · nav links\nAvatar (avatar_url/initials)\nLink → /profile"]
+    FOOT["SpaFooter"]
+    HERO["PageHero\nprops: title · subtitle\nimageSrc · ctaLabel · ctaHref"]
+    SEC["SectionWrapper\nmax-width container"]
+  end
+
+  subgraph "Booking"
+    WIZ["BookingWizard [Client]\nStep 1-4 state machine\nCountdown timer"]
+    CAL["CalendarPicker"]
+    BSC["BookingSummaryCard\nstatus badge · cancel button"]
+    CBB["CancelBookingButton [Client]\nConfirmDialog trigger"]
+  end
+
+  subgraph "Admin"
+    ASB["AdminSidebar [Client]\nNav links · active state"]
+    SFF["ServiceForm [Client]\nField validation · gallery\nImageUpload × n"]
+    TFF["TherapistForm [Client]\nField validation\nImageUpload (photo)"]
+    IUP["ImageUpload [Client]\nFile picker · preview\nuploadEndpoint prop\nProgress indicator"]
+    CDG["ConfirmDialog [Client]\nDestructive action modal"]
+  end
+
+  subgraph "UI Primitives"
+    AVT["Avatar\nprops: src · name · size\nShows image or initials"]
+    SVC["ServiceCard\nImage · name · duration\nformatPrice(price)"]
+    THC["TherapistCard\nPhoto · name · title"]
+    TOA["Toast notifications\npushToast(type, message)"]
+  end

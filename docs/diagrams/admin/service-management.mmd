@@ -1,0 +1,11 @@
+flowchart TD
+  LIST["Services list\nGET /api/admin/services"]
+  CREATE["Create service\nPOST /api/admin/services\nadminServiceSchema"]
+  EDIT["Edit service\nPUT /api/admin/services/id"]
+  DEL["Delete service\nDELETE /api/admin/services/id\nadminServiceDeleteSchema"]
+  IMG_ADD["Add image\nPOST /api/admin/services/id/images\nmax 8 images (MAX_GALLERY_IMAGES)"]
+  IMG_DEL["Remove image\nDELETE /api/admin/services/id/images\ndeletes from storage + DB"]
+  ASSIGN["Assign therapists\nservice_therapists join table"]
+
+  LIST --> CREATE & EDIT & DEL
+  EDIT --> IMG_ADD & IMG_DEL & ASSIGN

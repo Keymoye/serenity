@@ -1,0 +1,18 @@
+flowchart TD
+  subgraph "Booking confirmed"
+    BC["bookingConfirmationTemplate\nTo: Customer\nContains: service, date,\ntherapist, reference code"]
+  end
+  subgraph "New booking — admin alert"
+    NB["adminNewBookingTemplate\nTo: Admin\nContains: customer name,\nservice, date, time"]
+  end
+  subgraph "Cancellation confirmed"
+    CC["cancellationConfirmationTemplate\nTo: Customer\nContains: service, date,\ncancelled at timestamp"]
+  end
+  subgraph "Late cancellation — admin alert"
+    LC["adminLateCancellationTemplate\nTo: Admin\nTriggered: < 24 hours before\nappointment start"]
+  end
+
+  EV1["Booking confirmed event"] --> BC
+  EV1 --> NB
+  EV2["Cancellation event"] --> CC
+  EV2 -->|"hours < LATE_CANCELLATION_HOURS\n(24)"| LC

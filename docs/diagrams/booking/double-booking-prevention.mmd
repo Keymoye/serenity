@@ -1,0 +1,21 @@
+flowchart TD
+  SEL["Customer selects slot"]
+
+  L1["Layer 1 — Soft Lock\ntry_lock_slot RPC\natomic UPDATE time_slots\nSET locked_until = now+30s\nWHERE locked_until IS NULL\nOR locked_until < now"]
+  L1F["❌ ConflictError 409\nSlot already locked"]
+
+  L2["Layer 2 — Mark as Booked\nUPDATE time_slots\nSET is_available = false\nWHERE is_available = true"]
+  L2F["❌ ConflictError 409\n0 rows updated"]
+
+  L3["Layer 3 — Count Check\ncountConfirmedBookings\nWithSlot() > 0"]
+  L3F["❌ ConflictError 409\nDuplicate detected"]
+
+  OK["✅ Booking confirmed\nEmails sent"]
+
+  SEL --> L1
+  L1 -->|acquired| L2
+  L1 -->|failed| L1F
+  L2 -->|updated| L3
+  L2 -->|0 rows| L2F
+  L3 -->|count = 0| OK
+  L3 -->|count > 0| L3F

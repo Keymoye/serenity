@@ -1,0 +1,13 @@
+flowchart TD
+  subgraph "Dashboard page — server component"
+    FETCH["Promise.all\nlistCustomerBookings()\ngetPublicSiteSettings()"]
+    HERO["PageHero\nhero_image_url from settings\nWelcome back FirstName"]
+    STRIP["User summary strip\nAvatar (avatar_url or initials)\nName · upcoming · last visit · total"]
+    UPC["Upcoming appointments\nBookingSummaryCard × n\nCancelBookingButton"]
+    PAST["Past visits (collapsible)\nBookingSummaryCard × 5"]
+  end
+
+  FETCH --> HERO
+  FETCH --> STRIP
+  FETCH --> UPC
+  FETCH --> PAST

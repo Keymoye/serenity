@@ -1,0 +1,22 @@
+sequenceDiagram
+  participant S as booking.service.ts
+  participant E as lib/infra/resend/
+  participant R as Resend API
+  participant IN as Email Inbox
+
+  Note over S: Booking or cancellation event
+
+  S->>E: sendBookingConfirmation(email, data)
+  Note over E: wrapped in try/catch\nnever rethrows
+
+  E->>R: resend.emails.send({ to, subject, html })
+  alt success
+    R-->>E: { id }
+    E-->>S: void (non-blocking)
+  else Resend error
+    R-->>E: error
+    E->>E: logger.error(...)\nsilently swallowed
+    E-->>S: void (non-blocking)
+  end
+
+  Note over S: booking operation\ncontinues regardless
