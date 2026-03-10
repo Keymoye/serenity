@@ -1,4 +1,5 @@
 # Supabase Storage
+> Last updated: Batch 9 (March 2026)
 
 ## Overview
 Supabase Storage stores uploaded images for the Serenity Spa booking application. All uploads go through the admin upload API endpoint - never directly from the client browser. This provides security, validation, and consistent file handling.
@@ -65,38 +66,44 @@ export const ALLOWED_IMAGE_TYPES = [
 ] as const;
 ```
 
-## Upload flow
+## Upload flow diagram
 
-### Complete upload process:
-```
-Client (ImageUpload component)
-  │
-  ▼ FormData POST /api/admin/upload
-  │   - file: File object
-  │   - bucket: string
-  │   - entityId: string
-  │
-app/api/admin/upload/route.ts
-  │ 1. requireAdmin() - validates admin session
-  │ 2. Zod validates bucket name
-  │ 3. File size validation (≤ 2MB)
-  │ 4. MIME type validation (image/*)
-  │ 5. Generate filename
-  │ 6. storage.repo.uploadFile()
-  │
-lib/infra/supabase/storage.repo.ts
-  │ 1. getSupabaseAdminClient()
-  │ 2. supabase.storage.from(bucket).upload()
-  │ 3. Returns public URL
-  │
-Supabase Storage
-  │ 1. Stores file in bucket
-  │ 2. Generates public URL
-  │ 3. Returns file metadata
-  │
-Response to client
-  │ { url: string, filename: string, bucket: string }
-```
+Admin image upload:
+Admin selects file in ImageUpload
+│
+▼
+POST /api/admin/upload
+{ file, bucket, entityId }
+requireAdmin() guard
+│
+▼
+storageRepo.uploadFile(bucket, filename, file)
+│
+▼
+Supabase Storage bucket
+│
+▼
+Public URL returned → onUpload(url) callback
+→ form state updated → saved on submit
+
+
+Customer avatar upload:
+Customer selects photo in ImageUpload
+│
+▼
+POST /api/profile/upload
+{ file }
+requireCustomer() guard
+bucket locked to: avatar-uploads
+│
+▼
+storageRepo.uploadFile(
+"avatar-uploads", filename, file)
+│
+▼
+Public URL returned → setAvatarUrl(url)
+→ included in PATCH /api/profile body
+→ avatar_url saved to profiles table
 
 ### Request format:
 ```typescript
@@ -126,6 +133,9 @@ formData.append("entityId", "service-123");
 - `service-abc123-1704067200000.jpg`
 - `therapist-def456-1704067201000.png`
 - `user-ghi789-1704067202000.webp`
+
+### Avatar filename convention:
+`avatar-{userId}-{timestamp}.{ext}`
 
 ### Implementation:
 ```typescript

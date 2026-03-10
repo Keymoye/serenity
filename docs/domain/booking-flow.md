@@ -1,7 +1,21 @@
 # Booking Flow
+> Last updated: Batch 9 (March 2026)
 
 ## Overview
 The booking flow is a 4-step wizard that guides customers through selecting a service, choosing a therapist, picking a date/time, and confirming their appointment. The system uses optimistic slot locking to prevent double-booking while providing a smooth user experience.
+
+## Wizard flow diagram
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Step 1  │───▶│  Step 2  │───▶│  Step 3  │───▶│  Step 4  │
+│ Service  │    │Therapist │    │Date/Time │    │ Confirm  │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+│                │
+lock fails       confirm fails
+│                │
+▼                ▼
+show error        show error
+re-fetch          stay on
+availability      step 4
 
 ## Wizard steps
 
@@ -98,7 +112,7 @@ interface TimeSlot {
 1. User clicks available time slot
 2. Immediate UI feedback (loading state)
 3. `POST /api/booking/lock` with `timeSlotId`
-4. If successful: slot reserved for 10 minutes
+4. If successful: slot reserved for 30 seconds
 5. If failed: show error, allow retry
 6. Proceed to confirmation step
 
@@ -164,7 +178,31 @@ interface Booking {
 ## Slot locking
 
 ### Purpose:
-Prevent two customers from booking the same time slot simultaneously during the 10-minute booking window.
+Prevent two customers from booking the same time slot simultaneously during the 30-second booking window.
+
+### Sequence diagram:
+Customer selects time slot
+│
+▼
+POST /api/booking/lock { timeSlotId }
+│
+▼
+lockSlot() — booking.service.ts
+│
+▼
+LOCK_TIMEOUT_MS = 30 * 1000
+lockUntil = now + 30 seconds
+│
+▼
+try_lock_slot(slotId, lockUntil, now)
+Postgres RPC — atomic UPDATE
+┌───┴───┐
+TRUE    FALSE
+│        │
+▼        ▼
+slot locked  ConflictError → 409
+30s countdown  re-fetch
+starts         availability
 
 ### Implementation:
 ```sql
@@ -190,9 +228,9 @@ $$ language plpgsql stable;
 ```
 
 ### Lock duration:
-- **Duration:** 10 minutes (`LOCK_TIMEOUT_MS = 10 * 60 * 1000`)
+- **Duration:** 30 seconds (`LOCK_TIMEOUT_MS = 30 * 1000`)
 - **Expiry:** Slots automatically unlock when `locked_until < now()`
-- **User experience:** 10 minutes to complete booking wizard
+- **User experience:** 30 seconds to complete booking wizard
 
 ### Lock flow:
 ```typescript
@@ -235,11 +273,32 @@ async lockSlot(slotId: string, lockUntil: Date): Promise<boolean> {
 
 ## Double-booking prevention
 
-### Three layers of protection:
+### Layered diagram:
+┌────────────────────────────────────────┐
+│  Layer 1 — Soft lock (30 seconds)      │
+│  try_lock_slot RPC · atomic UPDATE     │
+│  Stops concurrent slot selection       │
+└───────────────────┬────────────────────┘
+│ lock acquired
+▼
+┌────────────────────────────────────────┐
+│  Layer 2 — Atomic mark-as-booked       │
+│  UPDATE time_slots                     │
+│  SET is_available = false              │
+│  WHERE is_available = true             │
+│  0 rows updated → ConflictError 409    │
+└───────────────────┬────────────────────┘
+│ slot marked
+▼
+┌────────────────────────────────────────┐
+│  Layer 3 — Confirmed count check       │
+│  countConfirmedBookingsWithSlot()      │
+│  count > 0 → ConflictError 409         │
+└────────────────────────────────────────┐
 
-#### 1. Slot lock (10-minute reservation)
+#### 1. Slot lock (30-second reservation)
 - **Purpose:** Reserve slot during booking process
-- **Duration:** 10 minutes
+- **Duration:** 30 seconds
 - **Mechanism:** `locked_until` timestamp in `time_slots` table
 - **Behavior:** Slot appears unavailable to other users
 
@@ -497,7 +556,7 @@ throw new ConflictError("SLOT_UNAVAILABLE", "This slot is no longer available");
 throw new ConflictError("SLOT_EXPIRED", "Your reservation expired. Please select a new time.");
 ```
 **Response:** 409 Conflict  
-**UI:** "Your 10-minute reservation expired. Please start over."
+**UI:** "Your 30-second reservation expired. Please start over."
 
 #### Service not found
 ```typescript

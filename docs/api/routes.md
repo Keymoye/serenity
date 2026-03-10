@@ -1,4 +1,5 @@
 # API Routes
+> Last updated: Batch 9 (March 2026)
 
 ## Conventions
 - All routes return JSON responses
@@ -201,7 +202,8 @@ const current = await requireAdmin(); // Throws 401 if not logged in, 403 if not
 **Auth:** Customer  
 **Rate limited:** NO  
 **Schema:** `lockSchema`  
-**Response:** Lock success/failure
+**Response:** Lock success/failure  
+**Description:** Lock a slot for 30 seconds
 
 **Request:**
 ```typescript
@@ -218,7 +220,7 @@ const current = await requireAdmin(); // Throws 401 if not logged in, 403 if not
 }
 ```
 
-**Notes:** Locks slot for 10 minutes to prevent double booking during checkout
+**Notes:** Locks slot for 30 seconds to prevent double booking during checkout
 
 ### POST /api/booking/confirm
 **Auth:** Customer  
@@ -346,8 +348,11 @@ const current = await requireAdmin(); // Throws 401 if not logged in, 403 if not
 {
   name?: string;
   phone?: string;
+  avatar_url?: string | null;
 }
 ```
+
+**Description:** name (optional), phone (optional), avatar_url (optional nullable string)
 
 **Response (200):**
 ```typescript
@@ -380,6 +385,29 @@ const current = await requireAdmin(); // Throws 401 if not logged in, 403 if not
   message: "Password updated"
 }
 ```
+
+### POST /api/profile/upload
+**Auth:** Customer  
+**Rate limited:** NO  
+**Schema:** multipart/form-data  
+**Response:** 201 { url }  
+**Description:** Upload avatar to avatar-uploads bucket
+
+**Request:**
+```
+file: File (JPEG/PNG/WebP, max 2MB)
+```
+
+**Response (201):**
+```typescript
+{
+  url: string;
+  filename: string;
+  bucket: "avatar-uploads";
+}
+```
+
+**Constraints:** Max 2 MB · JPEG/PNG/WebP only · bucket restricted to avatar-uploads
 
 ## Contact + Settings Routes
 

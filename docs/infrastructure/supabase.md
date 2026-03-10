@@ -1,4 +1,14 @@
 # Supabase
+> Last updated: Batch 9 (March 2026)
+
+## Table relationship diagram
+profiles ──────────────── bookings (id) 1:many (customer_id FK)
+│ time_slots (time_slot_id FK)
+│ therapists (therapist_id FK)
+
+services ──────────────── service_images (id) 1:many (service_id FK)
+
+services ──────────────── service_therapists (id) many:many (service_id FK) therapists ───────────────(therapist_id FK) (id)
 
 ## Overview
 Supabase provides the backend infrastructure for this spa booking application:
@@ -97,6 +107,7 @@ export async function getSupabaseServerAuthClient(
 | name | text | NOT NULL | - | User's full name |
 | phone | text | YES | - | Phone number |
 | role | text | NOT NULL | 'customer' | 'admin' | 'customer' | 'guest' |
+| avatar_url | text | YES | - | Profile photo URL from avatar-uploads bucket |
 
 **Foreign keys:**
 - `id` → `auth.users(id)` ON DELETE CASCADE
@@ -235,6 +246,8 @@ export async function getSupabaseServerAuthClient(
 - `idx_bookings_slot` - `(time_slot_id)` (unique)
 - `idx_bookings_customer` - `(customer_id)`
 - `idx_bookings_status_timeslot` - `(status, time_slot_id)`
+
+> Note: PostgREST cannot filter on related table columns directly. countConfirmedBookingsWithSlot uses a two-step query: first fetch time_slot IDs in the date range, then count bookings using .in().
 
 ### messages
 **Purpose:** Contact form messages from website

@@ -1,49 +1,41 @@
 # Architecture
+> Last updated: Batch 9 (March 2026)
 
 ## Layer diagram (ASCII art)
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        UI Layer                              │
-│  React Components (app/, components/)                       │
-│  ────────────────────────────────────────────────────────── │
-│  No external service imports                                 │
-│  Calls API routes via fetch/apiFetch                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (HTTP)
-┌─────────────────────────────────────────────────────────────┐
-│                    API Routes Layer                         │
-│  Next.js Route Handlers (app/api/)                          │
-│  ────────────────────────────────────────────────────────── │
-│  HTTP concerns only (request/response)                      │
-│  Validation with Zod schemas                               │
-│  Calls application services                                 │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (function calls)
-┌─────────────────────────────────────────────────────────────┐
-│                Application Services Layer                   │
-│  Business logic (lib/application/)                          │
-│  ────────────────────────────────────────────────────────── │
-│  Domain errors, business rules, orchestration               │
-│  Calls infrastructure repositories                          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (repository calls)
-┌─────────────────────────────────────────────────────────────┐
-│                Infrastructure Layer                          │
-│  External service clients (lib/infra/)                     │
-│  ────────────────────────────────────────────────────────── │
-│  Supabase clients, Resend, Upstash, Storage                 │
-│  No business logic                                          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (network calls)
-┌─────────────────────────────────────────────────────────────┐
-│                     External Services                        │
-│  Supabase (DB/Auth/Storage), Resend, Upstash               │
-└─────────────────────────────────────────────────────────────┘
-```
+┌─────────────────────────────────────┐
+│             UI Layer                │
+│  app/(public) · (customer) · (admin)│
+│  components/                        │
+└──────────────┬──────────────────────┘
+│ fetch / server action
+▼
+┌─────────────────────────────────────┐
+│             API Layer               │
+│  app/api/**  route handlers         │
+│  Zod validation · auth guards       │
+└──────────────┬──────────────────────┘
+│ calls service functions
+▼
+┌─────────────────────────────────────┐
+│         Application Layer           │
+│  lib/application/  services         │
+│  business logic · orchestration     │
+└──────────────┬──────────────────────┘
+│ calls repos
+▼
+┌─────────────────────────────────────┐
+│        Infrastructure Layer         │
+│  lib/infra/supabase/  repos         │
+│  lib/infra/resend/                  │
+│  lib/infra/upstash/                 │
+└──────────────┬──────────────────────┘
+│
+▼
+┌─────────────────────────────────────┐
+│         External Services           │
+│  Supabase DB · Resend · Upstash     │
+│  Supabase Storage                   │
+└─────────────────────────────────────┘
 
 ## Layer rules
 
@@ -95,81 +87,59 @@
 
 ## Request lifecycle
 
-### Booking confirmation flow example:
-```
-Browser (BookingWizard step 4)
-  │
-  ▼ POST /api/booking/confirm
-  │   { serviceId, therapistId, timeSlotId, notes }
-  │
-app/api/booking/confirm/route.ts
-  │ 1. requireCustomer() - validates session
-  │ 2. Zod validates request body
-  │ 3. confirmBooking(input, context)
-  │
-lib/application/booking.service.ts
-  │ 1. Validates slot is still locked
-  │ 2. bookingRepo.createBooking()
-  │ 3. timeSlotRepo.tryMarkAsBooked()
-  │ 4. sendBookingConfirmation()
-  │ 5. sendAdminNewBookingNotification()
-  │
-lib/infra/supabase/booking.repo.ts
-  │ 1. getSupabaseUserClient()
-  │ 2. Insert booking row
-  │ 3. Return created booking
-  │
-Supabase Database
-  │ 1. RLS allows insert (auth.uid() = customer_id)
-  │ 2. Unique index prevents double booking
-  │ 3. Returns new booking row
-  │
-lib/infra/supabase/timeSlot.repo.ts
-  │ 1. Call try_lock_slot() RPC function
-  │ 2. Atomic update: is_available = false
-  │ 3. Returns success/failure
-  │
-lib/utils/emailService.ts
-  │ 1. Resend client sends emails
-  │ 2. Templates generated from booking data
-  │ 3. Errors logged but don't fail request
-  │
-Response flows back through layers:
-  bookingRepo → booking.service → API route → Browser
-```
+Browser request
+│
+▼
+middleware.ts — session check
+│
+┌──┴──┐
+yes    no
+│      └──▶ redirect /auth/login
+▼
+app/api/route handler
+│
+▼
+requireAdmin() / requireCustomer()
+│
+▼
+Zod.parse(body) — 400 if invalid
+│
+▼
+service function (lib/application/)
+│
+▼
+repo function (lib/infra/supabase/)
+│
+▼
+Supabase client → DB query
+│
+▼
+domain object returned
+│
+▼
+NextResponse.json() — HTTP response
 
 ## Auth flow
 
-### Complete authentication sequence:
-```
-1. User submits login form (email + password)
-   ↓
-2. POST /api/auth/login
-   Body: { email, password }
-   ↓
-3. lib/infra/supabase/auth.repo.ts
-   signInWithPassword(email, password)
-   ↓
-4. Supabase Auth validates credentials
-   Returns session (access_token + refresh_token)
-   ↓
-5. getSupabaseServerAuthClient() sets session cookies
-   @supabase/ssr handles cookie management
-   ↓
-6. Middleware runs on every protected route
-   - Reads session from cookies
-   - Checks user exists in profiles table
-   - Validates role for admin routes
-   ↓
-7. API routes call requireAdmin() or requireCustomer()
-   - Reads session via getSupabaseUserClient()
-   - Throws UnauthorizedError if no session
-   - Throws ForbiddenError if wrong role
-   ↓
-8. Error mapped to HTTP response
-   UnauthorizedError → 401
-   ForbiddenError → 403
-```
+Request to /admin/* or /dashboard/*
+│
+▼
+middleware.ts reads Supabase session cookie
+│
+┌──┴───────────────┐
+no session          session exists
+│                     │
+▼                  check role
+redirect             ┌───┴───┐
+/auth/login        admin  customer
+│        │
+/admin/*   /dashboard
+/profile   /book
+│        │
+requireAdmin  requireCustomer
+│        │
+403 if not  401 if no
+admin      session
 
 ### Middleware protected routes:
 ```typescript
@@ -198,31 +168,25 @@ if (isAdminRoute) {
 
 ## Error handling pattern
 
-### Error chain from service to client:
-```
-1. Service throws domain error
-   throw new ValidationError("Invalid date format");
-   ↓
-2. API route catches and maps
-   try {
-     await serviceFunction();
-   } catch (error) {
-     const { status, body } = mapErrorToLegacyHttp(error);
-     return NextResponse.json(body, { status });
-   }
-   ↓
-3. Error mapper converts to HTTP response
-   lib/utils/errorMapper.ts:
-   ValidationError → { status: 400, body: { error: "...", code: "VALIDATION_ERROR" } }
-   ConflictError → { status: 409, body: { error: "...", code: "CONFLICT" } }
-   ↓
-4. Client receives JSON error
-   apiFetch() throws on non-2xx responses
-   useApi() hook exposes error state
-   ↓
-5. UI displays error message
-   {error && <div className="text-red-600">{error}</div>}
-```
+Domain error thrown in service
+e.g. NotFoundError, ConflictError
+│
+▼
+bubbles to route handler catch block
+│
+▼
+mapErrorToLegacyHttp(error)
+┌─────────────────────────┐
+│ NotFoundError   → 404   │
+│ ForbiddenError  → 403   │
+│ ConflictError   → 409   │
+│ ValidationError → 400   │
+│ Unknown         → 500   │
+└─────────────────────────┘
+│
+▼
+NextResponse.json(body, { status })
+{ error: "message", code: "CODE" }
 
 ### Error response shape:
 ```typescript

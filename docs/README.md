@@ -60,6 +60,13 @@ booking-app/
 └── [config files]         # package.json, next.config.ts, etc.
 ```
 
+## Key constants
+| Constant | Value | Description |
+|----------|-------|-------------|
+| LOCK_TIMEOUT_MS | 30000 | Slot lock duration (30 seconds) |
+| CURRENCY_LOCALE | 'en-KE' | Locale for price formatting |
+| CURRENCY_CODE | 'KES' | ISO currency code (Kenyan Shilling) |
+
 ## Architecture principles
 - **4-layer hexagonal architecture**: UI → API Routes → Application Services → Infrastructure/Repos → External
 - **No Supabase imports outside lib/infra/** - All database access goes through repository pattern
@@ -68,3 +75,11 @@ booking-app/
 - **All routes use requireAdmin() or requireCustomer()** - Centralized auth checks
 - **TypeScript-first** - All data shapes defined as interfaces, validated with Zod at runtime
 - **Email failures never crash bookings** - All email calls wrapped in try/catch with graceful degradation
+
+## Utility functions
+
+### formatPrice(price)
+- **File:** `lib/utils/format.ts` 
+- **Input:** `number | null | undefined` 
+- **Output:** Formatted string e.g. `KSh 2,500` or `—` for null
+- **Used by:** `ServiceCard`, `services/[id]/page.tsx`, `admin/services/page.tsx`

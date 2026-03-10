@@ -1,7 +1,64 @@
 # Data Models
+> Last updated: Batch 9 (March 2026)
 
-## Overview
-Domain types live in `lib/domain/*.types.ts` and are the source of truth for data shapes across the entire application. They are pure TypeScript interfaces with no external dependencies, making them easy to test and reuse. All API routes validate these shapes at runtime using Zod schemas.
+## ER diagram
+┌──────────────┐ ┌──────────────┐
+│ profiles │ │ services │
+│──────────────│ │──────────────│
+│ id (PK) │ │ id (PK) │
+│ name │ │ name │
+│ phone │ │ category │
+│ role │ │ duration_min │
+│ avatar_url │ │ price │
+└──────┬───────┘ │ description │
+│ │ is_active │
+│ 1:many └──────┬───────┘
+│ │ 1:many
+▼ ▼
+┌──────────────┐ ┌──────────────┐
+│ bookings │ │serv_images │
+│──────────────│ │──────────────│
+│ id (PK) │ │ id (PK) │
+│ customer_id ─┼──FK────▶│ service_id │
+│ time_slot_id │ │ image_url │
+│ service_id │ │ display_order│
+│ therapist_id │ └──────────────┘
+│ status │
+│ notes │
+│ ref_code │
+└──────┬───────┘
+│ │ many:1
+▼ ▼
+┌──────────────┐
+│ therapists │
+│──────────────│
+│ id (PK) │
+│ name │
+│ title │
+│ bio │
+│ photo_url │
+│ is_active │
+└──────┬───────┘
+│
+▼
+┌──────────────┐
+│ time_slots │
+│──────────────│
+│ id (PK) │
+│ therapist_id ┼──FK────────────┘
+│ start_time │
+│ end_time │
+│ is_available │
+│ locked_until │
+└──────────────┘
+
+┌────────────────────┐
+│ service_therapists │
+│────────────────────│
+│ service_id (FK) │
+│ therapist_id (FK) │
+│ many:many join │
+└────────────────────┘
 
 ## Service Types
 
@@ -378,7 +435,8 @@ const adminUploadSchema = z.object({
 ```typescript
 const profileUpdateSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().optional()
+  phone: z.string().optional(),
+  avatar_url: z.string().nullable().optional()
 });
 
 const passwordUpdateSchema = z.object({

@@ -1,4 +1,5 @@
 # Component Tree
+> Last updated: Batch 9 (March 2026)
 
 ## Public pages
 
@@ -138,56 +139,35 @@ app/(public)/therapists/[id]/page.tsx (Server)
 
 ### app/(customer)/dashboard/page.tsx
 ```
-app/(customer)/dashboard/page.tsx (Client)
-├── SpaNavbar (Client)
-├── PageHero (Client)
-│   ├── "Welcome back, {name}"
-│   ├── Dashboard navigation
-│   └── Quick stats
-├── SectionWrapper (Server)
-│   ├── Upcoming bookings
-│   │   └── BookingCard (×n)
-│   │       ├── Service name
-│   │       ├── Therapist name
-│   │       ├── Date & time
-│   │       ├── Status Badge
-│   │       ├── View button
-│   │       └── CancelBookingButton
-│   └── Past bookings
-│       └── BookingCard (×n)
-├── SectionWrapper (Server)
-│   └── Quick actions
-│       ├── Book new appointment
-│       └── Update profile
-└── SpaFooter (Server)
+app/(customer)/dashboard/page.tsx       [Server]
+├── SpaNavbar
+├── PageHero (hero_image_url from site settings)
+├── User summary strip
+│   ├── Avatar (avatar_url or initials) [Client]
+│   └── Name · upcoming count · last visit · total bookings
+├── Upcoming appointments section
+│   └── BookingSummaryCard × n
+│       └── CancelBookingButton         [Client]
+├── Past visits section (collapsible)
+│   └── BookingSummaryCard × n (last 5)
+└── SpaFooter
 ```
 
 ### app/(customer)/profile/page.tsx
 ```
-app/(customer)/profile/page.tsx (Client)
-├── SpaNavbar (Client)
-├── PageHero (Client)
-│   ├── "My Profile"
-│   └── Profile management
-├── SectionWrapper (Server)
-│   ├── Profile form
-│   │   ├── Input (Name)
-│   │   ├── Input (Phone)
-│   │   ├── Save button
-│   │   └── Loading states
-│   └── Password change
-│       ├── Input (Current password)
-│       ├── Input (New password)
-│       ├── Input (Confirm password)
-│       └── Update button
-├── SectionWrapper (Server)
-│   └── Avatar upload
-│       └── ImageUpload component
-│           ├── Current avatar
-│           ├── Upload button
-│           ├── Progress bar
-│           └── Preview
-└── SpaFooter (Server)
+app/(customer)/profile/page.tsx         [Server]
+├── SpaNavbar
+├── ProfileForm                         [Client]
+│   ├── Avatar (current photo or initials)
+│   ├── ImageUpload (avatar upload)
+│   │   └── endpoint: /api/profile/upload
+│   │   └── bucket: avatar-uploads
+│   ├── Name field
+│   ├── Phone field
+│   └── Save button → PATCH /api/profile
+│       └── sends: name, phone, avatar_url
+├── ChangePasswordForm                  [Client]
+└── SpaFooter
 ```
 
 ### app/(customer)/messages/page.tsx
@@ -658,6 +638,7 @@ interface Props {
   aspectRatio?: "square" | "landscape";
   disabled?: boolean;
   label?: string;
+  uploadEndpoint?: string;
 }
 ```
 - **Data fetching:** POST /api/admin/upload

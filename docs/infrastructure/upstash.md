@@ -1,7 +1,39 @@
 # Upstash Redis (Rate Limiting)
+> Last updated: Batch 9 (March 2026)
 
 ## Overview
 Upstash Redis provides serverless Redis for rate limiting authentication endpoints in the Serenity Spa booking application. This prevents brute-force attacks on login, register, magic-link, and password reset endpoints. Upstash is used because it requires no infrastructure management and provides a generous free tier.
+
+## Rate limit flow diagram
+POST /api/auth/login (or register etc.)
+│
+▼
+checkRateLimit(identifier)
+identifier = IP + route
+│
+▼
+Upstash Redis sliding window check
+AUTH_RATE_LIMIT_REQUESTS = 10
+AUTH_RATE_LIMIT_WINDOW   = "15 m"
+│
+┌────┴──────────────────┐
+under limit            over limit
+│                       │
+▼                       ▼
+{ success: true }     { success: false }
+route handler              │
+continues                  ▼
+HTTP 429 returned
+{ error: "Too many
+requests...",
+code: "RATE_LIMITED"}
+
+Redis unavailable (graceful degrade):
+│
+▼
+checkRateLimit returns { success: true }
+route continues — never blocks on Redis
+failure
 
 ## Environment variables
 | Variable | Required | Purpose | Where to get it |

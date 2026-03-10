@@ -1,4 +1,5 @@
 # Adding Features
+> Last updated: Batch 9 (March 2026)
 
 ## Architecture rules (must follow)
 
@@ -1075,6 +1076,56 @@ describe('ReviewForm', () => {
   });
 });
 ```
+
+## Adding format utility
+
+### When to add format utilities
+- **Currency formatting** - Use existing `formatPrice()` from `lib/utils/format.ts`
+- **Date formatting** - Use existing `formatAppointmentDate()` from `lib/utils/dateUtils.ts`
+- **New formatting needs** - Add to appropriate utility file
+
+### Example: Adding a new format utility
+```typescript
+// lib/utils/format.ts
+export function formatDuration(minutes: number | null | undefined): string {
+  if (!minutes) return "—";
+  
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  
+  return `${hours}h ${remainingMinutes}min`;
+}
+```
+
+### Usage in components
+```typescript
+// components/ServiceCard.tsx
+import { formatDuration, formatPrice } from "@/lib/utils/format";
+
+export function ServiceCard({ service }: { service: Service }) {
+  return (
+    <div>
+      <h3>{service.name}</h3>
+      <p>{formatDuration(service.duration_minutes)}</p>
+      <p>{formatPrice(service.price)}</p>
+    </div>
+  );
+}
+```
+
+### Guidelines for format utilities
+- **Handle null/undefined** gracefully (return "—" or similar)
+- **Use constants** for locale/currency settings
+- **Keep pure functions** - no side effects
+- **Add unit tests** for edge cases
 
 ## Documentation updates
 

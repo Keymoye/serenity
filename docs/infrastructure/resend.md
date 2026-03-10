@@ -1,7 +1,41 @@
 # Resend (Email)
+> Last updated: Batch 9 (March 2026)
 
 ## Overview
 Resend sends transactional emails for the Serenity Spa booking application. Used for booking confirmations, cancellation notices, and admin alerts. Resend provides a modern API-first email service with reliable delivery and analytics.
+
+## Email dispatch flow diagram
+Booking / cancellation event occurs
+in service layer (booking.service.ts)
+│
+▼
+Email function called
+e.g. sendBookingConfirmation(email, data)
+│
+┌─────┴──────────────────────────┐
+│  try {                         │
+│    resend.emails.send({        │
+│      to, subject, html         │
+│    })                          │
+│  } catch {                     │
+│    logger.error(...)           │
+│    // never rethrows           │
+│  }                             │
+└────────────────────────────────┘
+│
+▼
+Email sent (or silently failed)
+Booking operation continues regardless
+
+Recipients:
+┌────────────────┬───────────────┐
+│ Event          │ Recipients    │
+├────────────────┼───────────────┤
+│ Confirmed      │ Customer      │
+│ New booking    │ Admin         │
+│ Cancelled      │ Customer      │
+│ Late cancel    │ Admin         │
+└────────────────┴───────────────┘
 
 ## Environment variables
 | Variable | Required | Default | Purpose | Where to get it |

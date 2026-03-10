@@ -1,4 +1,35 @@
 # Error Handling
+> Last updated: Batch 9 (March 2026)
+
+## Error chain diagram
+Service layer throws domain error
+│
+├── NotFoundError
+├── ForbiddenError
+├── ConflictError
+├── ValidationError
+└── (unknown Error)
+│
+▼
+Route handler catch(error) block
+│
+▼
+mapErrorToLegacyHttp(error)
+│
+┌────┴────────────────────┐
+│  error type → status    │
+│  NotFoundError   → 404  │
+│  ForbiddenError  → 403  │
+│  ConflictError   → 409  │
+│  ValidationError → 400  │
+│  unknown         → 500  │
+└────────────────────────┘
+│
+▼
+NextResponse.json(
+{ error: string, code: string },
+{ status: number }
+)
 
 ## Domain errors
 All errors extend the `DomainError` base class and are defined in `lib/domain/errors.ts`. This provides a consistent error handling pattern across the entire application.

@@ -1,4 +1,5 @@
 # Environment Setup
+> Last updated: Batch 9 (March 2026)
 
 ## Prerequisites
 - **Node.js** 20+ - Required for Next.js 16
