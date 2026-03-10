@@ -1,0 +1,17 @@
+graph TD
+  UI["UI Layer\napp/(public) · (customer) · (admin)\ncomponents/"]
+  API["API Layer\napp/api/** route handlers\nZod validation · auth guards"]
+  APP["Application Layer\nlib/application/ services\nbusiness logic · orchestration"]
+  INFRA["Infrastructure Layer\nlib/infra/supabase/ repos\nlib/infra/resend/\nlib/infra/upstash/"]
+  EXT["External Services\nSupabase DB · Supabase Storage\nResend · Upstash Redis"]
+
+  UI -->|"fetch / server action"| API
+  API -->|"calls service functions"| APP
+  APP -->|"calls repos"| INFRA
+  INFRA -->|"queries / sends"| EXT
+
+  classDef ui fill:#e1f5fe
+  classDef api fill:#f3e5f5
+  classDef app fill:#e8f5e8
+  classDef infra fill:#fff3e0
+  classDef ext fill:#fce4ec

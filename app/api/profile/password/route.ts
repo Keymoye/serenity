@@ -1,9 +1,13 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { getCurrentUser } from "@/lib/services/authService";
 import { logger } from "@/lib/utils/logger";
+import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
+import { updatePasswordForCurrentUser } from "@/lib/application/profile.service";
 
 export async function POST(request: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "profile.password" });
   try {
     const current = await getCurrentUser();
 
@@ -17,38 +21,23 @@ export async function POST(request: Request) {
     const json = (await request.json()) as { password?: string };
     const password = json.password;
 
-    if (!password || password.length < 8) {
+    if (!password) {
       return NextResponse.json(
-        {
-          error: "Password must be at least 8 characters long.",
-          code: "VALIDATION_ERROR",
-        },
+        { error: "Password is required.", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
 
-    // Password update must happen using the auth client bound to the user session.
-    const supabase = getBrowserSupabaseClient();
-
-    const { error } = await supabase.auth.updateUser({ password });
-
-    if (error) {
-      logger.error("Supabase updateUser (password) failed", error, {
-        userId: current.user.id,
-      });
-      return NextResponse.json(
-        { error: "Unable to update password.", code: "UPDATE_FAILED" },
-        { status: 500 }
-      );
-    }
+    await updatePasswordForCurrentUser(
+      { password },
+      { userId: current.user.id, profileId: current.profile.id },
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error("Unexpected error in password update route", error);
-    return NextResponse.json(
-      { error: "Internal server error.", code: "INTERNAL_ERROR" },
-      { status: 500 }
-    );
+    log.error("Unexpected error in password update route", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 

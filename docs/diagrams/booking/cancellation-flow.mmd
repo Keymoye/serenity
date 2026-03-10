@@ -1,0 +1,25 @@
+sequenceDiagram
+  participant U as Customer
+  participant D as Dashboard
+  participant R as DELETE /api/booking/id
+  participant S as booking.service.ts
+  participant DB as Supabase DB
+  participant E as Resend Email
+
+  U->>D: clicks Cancel
+  D->>D: ConfirmDialog shown
+  U->>D: confirms cancellation
+  D->>R: DELETE /api/booking/id
+  R->>S: cancelBooking(bookingId, context)
+  S->>DB: fetch booking — verify exists
+  S->>S: verify customer_id === userId
+  S->>S: verify status !== cancelled
+  S->>S: calculate hours until appointment
+  S->>DB: UPDATE bookings SET status = cancelled
+  S->>DB: UPDATE time_slots SET is_available = true
+  alt hours < 24 (LATE_CANCELLATION_HOURS)
+    S->>E: sendAdminLateCancellationAlert()\nnon-blocking try/catch
+  end
+  S->>E: sendCancellationConfirmation()\nnon-blocking try/catch
+  R-->>D: 200 success
+  D->>D: refresh booking list

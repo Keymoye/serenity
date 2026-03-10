@@ -1,0 +1,11 @@
+flowchart TD
+  REQ["Route Handler receives request"]
+  BODY["await request.json()"]
+  ZOD["Schema.safeParse(body)\ne.g. bookingConfirmSchema"]
+  VALID{valid?}
+  ERR["return 400\n{ error, code: VALIDATION_ERROR }"]
+  PASS["pass typed payload\nto service function"]
+
+  REQ --> BODY --> ZOD --> VALID
+  VALID -->|no| ERR
+  VALID -->|yes| PASS

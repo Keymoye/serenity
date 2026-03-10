@@ -1,0 +1,25 @@
+sequenceDiagram
+  participant U as Customer
+  participant WZ as BookingWizard
+  participant R as POST /api/booking/lock
+  participant S as booking.service.ts
+  participant DB as Supabase DB
+
+  U->>WZ: clicks time slot
+  WZ->>R: POST { timeSlotId }
+  R->>S: lockSlot(timeSlotId, context)
+  Note over S: lockUntil = now + 30s\n(LOCK_TIMEOUT_MS = 30000)
+  S->>DB: try_lock_slot(slotId, lockUntil, now)\nPostgres RPC — atomic UPDATE
+  alt slot free
+    DB-->>S: TRUE
+    S-->>R: success
+    R-->>WZ: 200
+    WZ->>WZ: start 30s countdown
+    WZ->>U: advance to step 4
+  else slot taken
+    DB-->>S: FALSE
+    S-->>R: throw ConflictError
+    R-->>WZ: 409
+    WZ->>WZ: re-fetch availability
+    WZ->>U: show error message
+  end

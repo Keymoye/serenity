@@ -1,34 +1,52 @@
 import { ContactForm } from "@/components/forms/ContactForm";
 import { MapEmbed } from "@/components/MapEmbed";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { getPublicSiteSettings } from "@/lib/application/siteSettings.service";
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const settings = await getPublicSiteSettings();
+
   return (
-    <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <section className="space-y-4">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Contact us
-          </h1>
-          <p className="text-sm text-slate-700">
-            Have a question about treatments, group bookings, or special
-            requests? Send us a note and our team will respond within one
-            business day.
-          </p>
-        </header>
-        <ContactForm />
-      </section>
+    <SectionWrapper>
+      <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <section className="space-y-4">
+          <header className="space-y-2">
+            <h1 className="text-2xl font-semibold text-slate-900">Contact us</h1>
+            <p className="text-sm text-slate-700">Have a question about treatments, group bookings, or special requests? Send us a note and our team will respond within one business day.</p>
+            {settings.phone && (
+              <p className="text-sm text-slate-700">
+                Phone: <a href={`tel:${settings.phone}`} className="text-sky-700 hover:underline">{settings.phone}</a>
+              </p>
+            )}
+            {settings.email && (
+              <p className="text-sm text-slate-700">
+                Email: <a href={`mailto:${settings.email}`} className="text-sky-700 hover:underline">{settings.email}</a>
+              </p>
+            )}
+          </header>
+          <ContactForm />
+        </section>
 
-      <section>
-        <MapEmbed
-          coordinates={{ lat: 37.7749, lng: -122.4194 }}
-          address="123 Tranquility Lane, Wellness City"
-          openingHours={[
-            "Mon–Fri · 9:00–19:00",
-            "Sat–Sun · 10:00–18:00",
-          ]}
-        />
-      </section>
-    </div>
+        <section>
+          <MapEmbed
+            coordinates={{ lat: parseFloat(settings.location_lat), lng: parseFloat(settings.location_lng) }}
+            address={settings.address}
+            openingHours={settings.opening_hours}
+          />
+          <div className="mt-4 space-y-2">
+            {settings.instagram_url && (
+              <a href={settings.instagram_url} className="text-sm text-sky-700 hover:underline">Instagram</a>
+            )}
+            {settings.facebook_url && (
+              <a href={settings.facebook_url} className="text-sm text-sky-700 hover:underline">Facebook</a>
+            )}
+            {settings.twitter_url && (
+              <a href={settings.twitter_url} className="text-sm text-sky-700 hover:underline">Twitter</a>
+            )}
+          </div>
+        </section>
+      </div>
+    </SectionWrapper>
   );
 }
 

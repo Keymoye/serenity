@@ -1,61 +1,162 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import * as db from "@/lib/db/therapists";
+import { randomUUID } from "crypto";
+import { NextResponse, NextRequest } from "next/server";
 import { logger } from "@/lib/utils/logger";
+import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
+import { requireAdmin } from "@/lib/infra/supabase/currentUser";
+import {
+  listTherapistsAdmin,
+  createTherapistAdmin,
+  updateTherapistAdmin,
+  deleteTherapistAdmin,
+  assignServicesToTherapistAdmin,
+  listAllServicesForAssignment,
+} from "@/lib/application/admin.service";
+import {
+  adminTherapistSchema,
+  adminTherapistUpdateSchema,
+} from "@/lib/domain/admin.types";
 
-const TherapistCreateSchema = z.object({
-  name: z.string().min(1),
-  bio: z.string().optional().nullable(),
-  id: z.string().optional(),
-});
+export async function GET(request: NextRequest) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({
+    correlationId,
+    route: "admin.therapists.GET",
+  });
 
-export async function GET() {
   try {
-    const items = await db.listTherapists();
+    const current = await requireAdmin();
+
+    const url = new URL(request.url);
+
+    // If ?forAssignment=true return all services list
+    if (url.searchParams.get('forAssignment') === 'true') {
+      const services = await listAllServicesForAssignment(
+        { userId: current.user.id, role: current.profile.role }
+      );
+      return NextResponse.json({ services });
+    }
+
+    // Otherwise existing list behaviour
+    const items = await listTherapistsAdmin(
+      { userId: current.user.id, role: current.profile.role },
+    );
     return NextResponse.json(items);
-  } catch (err) {
-    logger.error("GET /api/admin/therapists failed", err);
-    return NextResponse.json({ error: "Failed to load therapists" }, { status: 500 });
+  } catch (error) {
+    log.error("GET /api/admin/therapists failed", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 
 export async function POST(req: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({
+    correlationId,
+    route: "admin.therapists.POST",
+  });
+
   try {
+    const current = await requireAdmin();
+
     const body = await req.json();
-    const parsed = TherapistCreateSchema.omit({ id: true }).parse(body);
-    const created = await db.createTherapist(parsed);
+    const parsed = adminTherapistSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
+    const created = await createTherapistAdmin(
+      parsed.data,
+      { userId: current.user.id, role: current.profile.role },
+    );
+
+    if (parsed.data.serviceIds !== undefined) {
+      await assignServicesToTherapistAdmin(
+        created.id,
+        parsed.data.serviceIds,
+        { userId: current.user.id, role: current.profile.role }
+      );
+    }
+
     return NextResponse.json(created, { status: 201 });
-  } catch (err: unknown) {
-    logger.error("POST /api/admin/therapists failed", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message ?? "Invalid payload" }, { status: 400 });
+  } catch (error: unknown) {
+    log.error("POST /api/admin/therapists failed", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 
 export async function PUT(req: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({
+    correlationId,
+    route: "admin.therapists.PUT",
+  });
+
   try {
+    const current = await requireAdmin();
+
     const body = await req.json();
-    const parsed = TherapistCreateSchema.parse(body);
-    if (!parsed.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const updated = await db.updateTherapist(parsed.id, { name: parsed.name, bio: parsed.bio });
+    const parsed = adminTherapistUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
+    const updated = await updateTherapistAdmin(
+      parsed.data.id,
+      parsed.data,
+      { userId: current.user.id, role: current.profile.role },
+    );
+
+    if (parsed.data.serviceIds !== undefined) {
+      await assignServicesToTherapistAdmin(
+        parsed.data.id,
+        parsed.data.serviceIds,
+        { userId: current.user.id, role: current.profile.role }
+      );
+    }
+
     return NextResponse.json(updated);
-  } catch (err: unknown) {
-    logger.error("PUT /api/admin/therapists failed", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message ?? "Update failed" }, { status: 400 });
+  } catch (error: unknown) {
+    log.error("PUT /api/admin/therapists failed", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 
 export async function DELETE(req: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({
+    correlationId,
+    route: "admin.therapists.DELETE",
+  });
+
   try {
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    await db.deleteTherapist(id);
+    const current = await requireAdmin();
+
+    const body = await req.json();
+    const id = body?.therapistId || body?.id;
+    if (!id || typeof id !== "string") {
+      return NextResponse.json(
+        { error: "Missing therapistId", code: "VALIDATION_ERROR" },
+        { status: 400 },
+      );
+    }
+
+    await deleteTherapistAdmin(
+      id,
+      { userId: current.user.id, role: current.profile.role },
+    );
     return NextResponse.json({ success: true });
-  } catch (err: unknown) {
-    logger.error("DELETE /api/admin/therapists failed", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message ?? "Delete failed" }, { status: 500 });
+  } catch (error: unknown) {
+    log.error("DELETE /api/admin/therapists failed", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
+

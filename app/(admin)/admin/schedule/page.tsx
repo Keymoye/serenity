@@ -1,140 +1,434 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
-import { adminTimeSlotCreateSchema, type AdminTimeSlotCreateInput } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
+import React, { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/utils/api";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmDialog } from "@/components/layout/ConfirmDialog";
+import { pushToast } from "@/components/ui/Toast";
+import type { TimeSlot } from "@/lib/domain/timeSlot.types";
 
-type SlotRow = {
+interface Therapist {
   id: string;
-  therapist_id: string;
-  start_time: string;
-  end_time: string;
-  is_available: boolean | null;
-};
-
-const INITIAL_FORM: AdminTimeSlotCreateInput = {
-  therapistId: "",
-  start_time: "",
-  end_time: "",
-};
+  name: string;
+}
 
 export default function AdminSchedulePage() {
-  const supabase = getBrowserSupabaseClient();
+  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [slots, setSlots] = useState<SlotRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<{ values: AdminTimeSlotCreateInput; error: string | null; isSubmitting: boolean }>({ values: INITIAL_FORM, error: null, isSubmitting: false });
+  // Filters
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [therapistFilter, setTherapistFilter] = useState("all");
 
-  const loadSlots = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from("time_slots").select("id, therapist_id, start_time, end_time, is_available").order("start_time", { ascending: false });
-      if (error) {
-        logger.error("Failed to load time slots", error);
-        return;
-      }
-      setSlots((data ?? []) as SlotRow[]);
-    } catch (err) {
-      logger.error("Unexpected error loading time slots", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase]);
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [therapistIdForm, setTherapistIdForm] = useState("");
+  const [dateForm, setDateForm] = useState("");
+  const [startTimeForm, setStartTimeForm] = useState("");
+  const [endTimeForm, setEndTimeForm] = useState("");
+  const [repeatForm, setRepeatForm] = useState("none");
+  const [repeatUntilForm, setRepeatUntilForm] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
+  // Delete confirmation
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  // Load therapists and slots
   useEffect(() => {
-    void loadSlots();
-  }, [loadSlots]);
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [thData, slData] = await Promise.all([
+          apiFetch<Therapist[]>("/api/admin/therapists"),
+          apiFetch<TimeSlot[]>("/api/admin/time-slots"),
+        ]);
+        setTherapists(thData ?? []);
+        setSlots(slData ?? []);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load schedule");
+        pushToast("error", "Failed to load schedule");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  // Filter slots
+  const filtered = React.useMemo(() => {
+    return slots.filter((s) => {
+      const startTime = new Date(s.start_time);
+      if (fromDate && startTime < new Date(fromDate)) return false;
+      if (toDate) {
+        const endOfDay = new Date(toDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (startTime > endOfDay) return false;
+      }
+
+      if (statusFilter === "available" && !s.is_available) return false;
+      if (statusFilter === "booked" && s.is_available) return false;
+      if (statusFilter === "locked" && !s.locked_until) return false;
+
+      if (therapistFilter !== "all" && s.therapist_id !== therapistFilter) return false;
+
+      return true;
+    });
+  }, [slots, fromDate, toDate, statusFilter, therapistFilter]);
+
+  const openCreateModal = () => {
+    setEditingId(null);
+    setTherapistIdForm("");
+    setDateForm("");
+    setStartTimeForm("");
+    setEndTimeForm("");
+    setRepeatForm("none");
+    setRepeatUntilForm("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (slot: TimeSlot) => {
+    const startDate = new Date(slot.start_time);
+    const startTime = startDate.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = startDate.toISOString().split("T")[0];
+    const endDate = new Date(slot.end_time);
+    const endTime = endDate.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+
+    setEditingId(slot.id);
+    setTherapistIdForm(slot.therapist_id);
+    setDateForm(dateStr);
+    setStartTimeForm(startTime);
+    setEndTimeForm(endTime);
+    setRepeatForm("none");
+    setRepeatUntilForm("");
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setForm((prev) => ({ ...prev, error: null, isSubmitting: true }));
-    const parsed = adminTimeSlotCreateSchema.safeParse(form.values);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setForm((prev) => ({ ...prev, error: firstError, isSubmitting: false }));
+    if (!therapistIdForm || !dateForm || !startTimeForm || !endTimeForm) {
+      pushToast("error", "Please fill all required fields");
       return;
     }
 
+    setSubmitting(true);
     try {
-      const { error } = await supabase.from("time_slots").insert({ therapist_id: parsed.data.therapistId, start_time: parsed.data.start_time, end_time: parsed.data.end_time });
-      if (error) {
-        logger.error("Failed to create time slot", error);
-        setForm((prev) => ({ ...prev, error: "Unable to create time slot.", isSubmitting: false }));
-        return;
+      const startDateTime = `${dateForm}T${startTimeForm}`;
+      const endDateTime = `${dateForm}T${endTimeForm}`;
+
+      if (editingId) {
+        // For simplicity, delete old and create new (or implement update in API)
+        await apiFetch("/api/admin/time-slots", {
+          method: "DELETE",
+          body: JSON.stringify({ id: editingId }),
+        });
       }
-      setForm({ values: INITIAL_FORM, error: null, isSubmitting: false });
-      await loadSlots();
+
+      await apiFetch("/api/admin/time-slots", {
+        method: "POST",
+        body: JSON.stringify({
+          therapistId: therapistIdForm,
+          start_time: new Date(startDateTime).toISOString(),
+          end_time: new Date(endDateTime).toISOString(),
+        }),
+      });
+
+      setShowModal(false);
+      const updated = await apiFetch<TimeSlot[]>("/api/admin/time-slots");
+      setSlots(updated ?? []);
+      pushToast("success", editingId ? "Slot updated" : "Slot created");
     } catch (err) {
-      logger.error("Unexpected error creating time slot", err);
-      setForm((prev) => ({ ...prev, error: "Something went wrong.", isSubmitting: false }));
+      console.error(err);
+      pushToast("error", "Failed to save slot");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleChange = (field: keyof AdminTimeSlotCreateInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, values: { ...(prev.values as Record<string, unknown>), [field]: e.target.value } as AdminTimeSlotCreateInput }));
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    setConfirmDeleteOpen(false);
+    try {
+      await apiFetch("/api/admin/time-slots", {
+        method: "DELETE",
+        body: JSON.stringify({ id: deletingId }),
+      });
+      setSlots((prev) => prev.filter((s) => s.id !== deletingId));
+      pushToast("success", "Slot deleted");
+    } catch (err) {
+      console.error(err);
+      pushToast("error", "Failed to delete slot");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const getStatus = (slot: TimeSlot) => {
+    if (slot.locked_until && new Date(slot.locked_until) > new Date()) return "locked";
+    return slot.is_available ? "available" : "booked";
+  };
+
+  const getTherapistName = (therapistId: string) => {
+    return therapists.find((t) => t.id === therapistId)?.name ?? therapistId;
   };
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Schedule</h1>
-        <p className="text-sm text-slate-700">Manage therapist time slots.</p>
+      <header className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-slate-900">Schedule</h1>
+          <p className="text-sm text-slate-700">Manage therapist time slots.</p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          New Time Slot
+        </button>
       </header>
 
-      <section>
-        <h2 className="text-sm font-semibold text-slate-900">Existing slots</h2>
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white mt-2">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="available">Available</option>
+              <option value="booked">Booked</option>
+              <option value="locked">Locked</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Therapist</label>
+            <select
+              value={therapistFilter}
+              onChange={(e) => setTherapistFilter(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All</option>
+              {therapists.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <button
+            onClick={() => {
+              setFromDate("");
+              setToDate("");
+              setStatusFilter("all");
+              setTherapistFilter("all");
+            }}
+            className="text-xs text-slate-600 hover:text-slate-900 underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <SkeletonTable rows={5} />
+      ) : error ? (
+        <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+      ) : filtered.length === 0 ? (
+        <EmptyState title="No time slots" message="No slots match your filters." />
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
               <tr>
-                <th className="px-3 py-2 text-left">Therapist</th>
-                <th className="px-3 py-2 text-left">Start</th>
-                <th className="px-3 py-2 text-left">End</th>
-                <th className="px-3 py-2 text-left">Available</th>
+                <th className="px-4 py-3 text-left">Therapist</th>
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Start</th>
+                <th className="px-4 py-3 text-left">End</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-sm text-slate-600">Loading slots...</td></tr>
-              ) : slots.length === 0 ? (
-                <tr><td colSpan={4} className="px-3 py-4 text-sm text-slate-600">No slots defined yet.</td></tr>
-              ) : (
-                slots.map((s) => (
-                  <tr key={s.id}>
-                    <td className="px-3 py-2 text-slate-900">{s.therapist_id}</td>
-                    <td className="px-3 py-2 text-slate-700">{s.start_time}</td>
-                    <td className="px-3 py-2 text-slate-700">{s.end_time}</td>
-                    <td className="px-3 py-2">{s.is_available ? "Yes" : "No"}</td>
-                  </tr>
-                ))
-              )}
+              {filtered.map((slot) => (
+                <tr key={slot.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">{getTherapistName(slot.therapist_id)}</td>
+                  <td className="px-4 py-3">{new Date(slot.start_time).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">{new Date(slot.start_time).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</td>
+                  <td className="px-4 py-3">{new Date(slot.end_time).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      status={getStatus(slot) === "available" ? "confirmed" : getStatus(slot) === "booked" ? "pending" : "cancelled"}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button
+                      onClick={() => openEditModal(slot)}
+                      disabled={getStatus(slot) === "booked"}
+                      title={getStatus(slot) === "booked" ? "Cannot edit booked slot" : ""}
+                      className="text-sky-600 hover:text-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeletingId(slot.id);
+                        setConfirmDeleteOpen(true);
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </section>
+      )}
 
-      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Create time slot</h2>
-        {form.error && <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{form.error}</div>}
-        <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Therapist ID</label>
-            <input required type="text" value={form.values.therapistId} onChange={handleChange("therapistId")} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowModal(false)}>
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {editingId ? "Edit Time Slot" : "Create Time Slot"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Therapist *</label>
+                <select
+                  value={therapistIdForm}
+                  onChange={(e) => setTherapistIdForm(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                >
+                  <option value="">Select therapist</option>
+                  {therapists.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Date *</label>
+                <input
+                  type="date"
+                  value={dateForm}
+                  onChange={(e) => setDateForm(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Start Time *</label>
+                  <input
+                    type="time"
+                    value={startTimeForm}
+                    onChange={(e) => setStartTimeForm(e.target.value)}
+                    required
+                    className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">End Time *</label>
+                  <input
+                    type="time"
+                    value={endTimeForm}
+                    onChange={(e) => setEndTimeForm(e.target.value)}
+                    required
+                    className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Repeat</label>
+                <select
+                  value={repeatForm}
+                  onChange={(e) => setRepeatForm(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                >
+                  <option value="none">None</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </div>
+
+              {(repeatForm === "daily" || repeatForm === "weekly") && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Repeat Until</label>
+                  <input
+                    type="date"
+                    value={repeatUntilForm}
+                    onChange={(e) => setRepeatUntilForm(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
+                >
+                  {submitting ? "Saving..." : editingId ? "Update" : "Create"}
+                </button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">Start (ISO)</label>
-            <input required type="text" value={form.values.start_time} onChange={handleChange("start_time")} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">End (ISO)</label>
-            <input required type="text" value={form.values.end_time} onChange={handleChange("end_time")} className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm" />
-          </div>
-          <div className="sm:col-span-2 flex items-center justify-end pt-1">
-            <button type="submit" disabled={form.isSubmitting} className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300">{form.isSubmitting ? "Creating..." : "Create slot"}</button>
-          </div>
-        </form>
-      </section>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete time slot"
+        description="Are you sure you want to delete this time slot?"
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

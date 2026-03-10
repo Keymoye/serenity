@@ -1,93 +1,40 @@
-import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { getServerSupabaseClient } from "../supabase/server";
-import { logger } from "../utils/logger";
+import { getCurrentUser as getServerCurrentUser, type CurrentUser } from '@/lib/infra/supabase/currentUser';
 
-export type AppRole = "customer" | "admin";
+/**
+ * Application-layer wrapper for auth functions.
+ * UI server components import from here — never from infra directly.
+ */
+export { type CurrentUser };
 
-export interface AppProfile {
-  id: string;
-  user_id: string;
-  name: string | null;
-  phone: string | null;
-  role: AppRole;
-}
+export const getCurrentUser = getServerCurrentUser;
 
-export interface CurrentUser {
-  user: User;
-  profile: AppProfile;
-}
-
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function requireCurrentUser() {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      logger.error("Failed to get authenticated user", userError);
-      return null;
-    }
-
-    if (!user) return null;
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      logger.error("Error loading profile", profileError, {
-        userId: user.id,
-      });
-      return null;
-    }
-
-    if (!profile) {
-      logger.warn("Profile not found for authenticated user", {
-        userId: user.id,
-      });
-      return null;
-    }
-
-    return {
-      user,
-      profile: profile as AppProfile,
-};
-  } catch (error) {
-    logger.error("Unexpected error in getCurrentUser", error);
+    const current = await getServerCurrentUser();
+    return current ?? null;
+  } catch (_err) {
     return null;
   }
 }
 
-export async function requireCustomer() {
-  const current = await getCurrentUser();
-  if (!current) {
-    logger.info("Unauthenticated access to customer-only route");
-    redirect("/auth/login");
-  }
-  return current;
+export async function isAdminUser() {
+  const cur = await requireCurrentUser();
+  return Boolean(cur?.profile?.role === 'admin');
 }
 
 export async function requireAdmin() {
-  const current = await getCurrentUser();
-  if (!current) {
-    logger.info("Unauthenticated access to admin route");
-    redirect("/");
+  const cur = await requireCurrentUser();
+  if (!cur || cur.profile?.role !== 'admin') {
+    return null;
   }
-
-  if (current.profile.role !== "admin") {
-    logger.warn("Non-admin user attempted to access admin route", {
-      userId: current.user.id,
-      role: current.profile.role,
-    });
-    redirect("/");
-  }
-
-  return current;
+  return cur;
 }
 
+export async function requireCustomer() {
+  const cur = await requireCurrentUser();
+  if (!cur) return null;
+  // allow admin for convenience in certain flows
+  const role = cur?.profile?.role;
+  if (role && role !== 'customer' && role !== 'admin') return null;
+  return cur;
+}

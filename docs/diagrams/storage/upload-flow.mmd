@@ -1,0 +1,28 @@
+sequenceDiagram
+  participant F as ImageUpload Component
+  participant R as Upload Route
+  participant G as Auth Guard
+  participant SR as storage.repo.ts
+  participant SB as Supabase Storage
+
+  F->>F: user selects file
+  F->>F: validate size < 2MB\nvalidate type JPEG/PNG/WebP
+  F->>R: POST multipart/form-data\n{ file, bucket, entityId }
+
+  alt Admin upload (/api/admin/upload)
+    R->>G: requireAdmin()
+  else Customer avatar (/api/profile/upload)
+    R->>G: requireCustomer()\nbucket locked to avatar-uploads
+  end
+
+  G-->>R: authorized context
+  R->>R: re-validate size + type
+  R->>SR: uploadFile(bucket, filename, file)
+  SR->>SB: storage.from(bucket).upload(path, buffer)
+  SB-->>SR: upload result
+  SR->>SB: getPublicUrl(path)
+  SB-->>SR: public URL
+  SR-->>R: url string
+  R-->>F: 201 { url, filename, bucket }
+  F->>F: setPreview(url)\nonUpload(url) callback
+  F->>F: form state updated

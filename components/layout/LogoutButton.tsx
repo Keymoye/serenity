@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { logger } from "@/lib/utils/logger";
+import { postJson } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -13,22 +15,9 @@ export function LogoutButton() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        logger.error("Logout API returned non-OK status", null, {
-          status: response.status,
-          body,
-        });
-      }
-    } catch (error) {
-      logger.error("Unexpected error while logging out", error);
+      await postJson("/api/auth/logout", {});
+    } catch (err: unknown) {
+      logger.error("Logout API returned non-OK status", err);
     } finally {
       setIsSubmitting(false);
       router.push("/auth/login");
@@ -41,9 +30,15 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isSubmitting}
-      className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-2"
     >
-      {isSubmitting ? "Logging out..." : "Logout"}
+      {isSubmitting ? (
+        <>
+          <Spinner size={4} /> Logging out...
+        </>
+      ) : (
+        "Logout"
+      )}
     </button>
   );
 }

@@ -1,0 +1,23 @@
+flowchart TD
+  SVC["Service layer\nthrows domain error"]
+
+  NF["NotFoundError"]
+  FB["ForbiddenError"]
+  CF["ConflictError"]
+  VE["ValidationError"]
+  UN["unknown Error"]
+
+  MAP["mapErrorToLegacyHttp(error)\nlib/utils/errorMapper.ts"]
+
+  R404["{ status: 404\n  body: { error, code: NOT_FOUND }}"]
+  R403["{ status: 403\n  body: { error, code: FORBIDDEN }}"]
+  R409["{ status: 409\n  body: { error, code: CONFLICT }}"]
+  R400["{ status: 400\n  body: { error, code: VALIDATION_ERROR }}"]
+  R500["{ status: 500\n  body: { error, code: INTERNAL_ERROR }}"]
+
+  RESP["NextResponse.json(body, { status })"]
+
+  SVC --> NF & FB & CF & VE & UN
+  NF & FB & CF & VE & UN --> MAP
+  MAP --> R404 & R403 & R409 & R400 & R500
+  R404 & R403 & R409 & R400 & R500 --> RESP

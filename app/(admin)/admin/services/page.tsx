@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
-import {
-  adminServiceSchema,
-  type AdminServiceInput,
-} from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
+import { apiFetch } from "@/lib/utils/api";
+import ServiceForm from "@/components/admin/ServiceForm";
+import Image from "next/image";
+import { formatPrice } from "@/lib/utils/format";
 
 type ServiceRow = {
   id: string;
@@ -15,56 +14,29 @@ type ServiceRow = {
   duration_minutes: number | null;
   price: number | null;
   is_active: boolean | null;
+  first_image_url: string | null;
   updated_at: string | null;
 };
 
-type FormState = {
-  values: AdminServiceInput;
-  error: string | null;
-  isSubmitting: boolean;
-};
 
-const INITIAL_FORM: AdminServiceInput = {
-  name: "",
-  category: "",
-  duration_minutes: 60,
-  price: 120,
-  is_active: true,
-};
 
 export default function AdminServicesPage() {
-  const supabase = getBrowserSupabaseClient();
-
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    values: INITIAL_FORM,
-    error: null,
-    isSubmitting: false,
-  });
+  const [editingService, setEditingService] = useState<ServiceRow | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("services")
-        .select(
-          "id, name, category, duration_minutes, price, is_active, updated_at"
-        )
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        logger.error("Failed to load admin services", error);
-        return;
-      }
-
-      setServices((data ?? []) as ServiceRow[]);
+      const data = await apiFetch<ServiceRow[]>("/api/admin/services");
+      setServices(data);
     } catch (error) {
       logger.error("Unexpected error while loading admin services", error);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadServices();
@@ -72,19 +44,16 @@ export default function AdminServicesPage() {
 
   const handleToggleActive = async (service: ServiceRow) => {
     try {
-      const { error } = await supabase
-        .from("services")
-        .update({ is_active: !service.is_active })
-        .eq("id", service.id);
-
-      if (error) {
-        logger.error("Failed to toggle service active", error, {
-          serviceId: service.id,
+        try {
+        await apiFetch("/api/admin/services", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: service.id, is_active: !service.is_active, name: service.name, category: service.category, duration_minutes: service.duration_minutes, price: service.price }),
         });
-        return;
+        await loadServices();
+      } catch (err) {
+        logger.error("Failed to toggle service active", err, { serviceId: service.id });
       }
-
-      await loadServices();
     } catch (error) {
       logger.error("Unexpected error toggling service active", error, {
         serviceId: service.id,
@@ -92,76 +61,7 @@ export default function AdminServicesPage() {
     }
   };
 
-  const handleChange =
-    (field: keyof AdminServiceInput) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value =
-        field === "duration_minutes" || field === "price"
-          ? Number(event.target.value)
-          : event.target.value;
-      setForm((prev) => ({
-        ...prev,
-        values: { ...(prev.values as Record<string, unknown>), [field]: value } as AdminServiceInput,
-      }));
-    };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    setForm((prev) => ({
-      ...prev,
-      error: null,
-      isSubmitting: true,
-    }));
-
-    const parsed = adminServiceSchema.safeParse(form.values);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setForm((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("services").insert({
-        name: parsed.data.name,
-        category: parsed.data.category || null,
-        duration_minutes: parsed.data.duration_minutes,
-        price: parsed.data.price,
-        is_active:
-          typeof parsed.data.is_active === "boolean"
-            ? parsed.data.is_active
-            : true,
-      });
-
-      if (error) {
-        logger.error("Failed to create service", error);
-        setForm((prev) => ({
-          ...prev,
-          error: "Unable to create service.",
-          isSubmitting: false,
-        }));
-        return;
-      }
-
-      setForm({
-        values: INITIAL_FORM,
-        error: null,
-        isSubmitting: false,
-      });
-      await loadServices();
-    } catch (error) {
-      logger.error("Unexpected error creating service", error);
-      setForm((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -182,6 +82,7 @@ export default function AdminServicesPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
               <tr>
+                <th className="px-3 py-2 text-left">Image</th>
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Category</th>
                 <th className="px-3 py-2 text-left">Duration</th>
@@ -194,7 +95,7 @@ export default function AdminServicesPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-3 py-4 text-sm text-slate-600"
                   >
                     Loading services...
@@ -203,15 +104,54 @@ export default function AdminServicesPage() {
               ) : services.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
-                    className="px-3 py-4 text-sm text-slate-600"
+                    colSpan={7}
+                    className="px-3 py-8"
                   >
-                    No services defined yet.
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-slate-600">
+                        No services yet.
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Add your first service to start
+                        accepting bookings.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setEditingService(null)
+                          setShowForm(true)
+                        }}
+                        className="mt-2 rounded-full bg-slate-900
+                                   px-4 py-1.5 text-xs font-medium
+                                   text-white hover:bg-slate-700"
+                      >
+                        Add service
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 services.map((service) => (
                   <tr key={service.id}>
+                    <td className="px-4 py-3">
+                      {service.first_image_url ? (
+                        <div className="relative h-10 w-10">
+                          <Image
+                            src={service.first_image_url}
+                            alt={service.name}
+                            fill
+                            className="object-cover rounded-lg"
+                            style={{ objectFit: 'cover' }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg 
+                                        bg-stone-100 flex items-center 
+                                        justify-center text-stone-400 
+                                        text-xs">
+                          No img
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-900">
                         {service.name}
@@ -227,7 +167,7 @@ export default function AdminServicesPage() {
                     </td>
                     <td className="px-3 py-2 text-slate-700">
                       {service.price != null
-                        ? `$${service.price.toFixed(2)}`
+                        ? formatPrice(service.price)
                         : "—"}
                     </td>
                     <td className="px-3 py-2">
@@ -242,6 +182,17 @@ export default function AdminServicesPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={() => {
+                          setEditingService(service)
+                          setShowForm(true)
+                        }}
+                        className="text-sm text-sky-600 
+                                   hover:text-sky-800 
+                                   transition-colors mr-2"
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleToggleActive(service)}
@@ -262,93 +213,63 @@ export default function AdminServicesPage() {
         <h2 className="text-sm font-semibold text-slate-900">
           Create new service
         </h2>
-        {form.error && (
-          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {form.error}
-          </div>
-        )}
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-3 sm:grid-cols-2"
+        <button
+          onClick={() => {
+            setEditingService(null)
+            setShowForm(true)
+          }}
+          className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700"
         >
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Name
-            </label>
-            <input
-              type="text"
-              value={form.values.name}
-              onChange={handleChange("name")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Category
-            </label>
-            <input
-              type="text"
-              value={form.values.category ?? ""}
-              onChange={handleChange("category")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Duration (minutes)
-            </label>
-            <input
-              type="number"
-              min={15}
-              max={600}
-              value={form.values.duration_minutes}
-              onChange={handleChange("duration_minutes")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-700">
-              Price
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={form.values.price}
-              onChange={handleChange("price")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-          <div className="sm:col-span-2 flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 text-xs text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.values.is_active ?? true}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    values: {
-                      ...prev.values,
-                      is_active: e.target.checked,
-                    },
-                  }))
-                }
-                className="h-3 w-3 rounded border-slate-300"
-              />
-              Active (visible for booking)
-            </label>
-            <button
-              type="submit"
-              disabled={form.isSubmitting}
-              className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-            >
-              {form.isSubmitting ? "Creating..." : "Create service"}
-            </button>
-          </div>
-        </form>
+          Add service
+        </button>
       </section>
+
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-start
+                     justify-center bg-black/40 
+                     overflow-y-auto p-4 pt-16"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl 
+                       w-full max-w-lg p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center 
+                            justify-between mb-4">
+              <h2 className="text-lg font-semibold 
+                             text-stone-800">
+                {editingService 
+                  ? "Edit service" 
+                  : "Add service"}
+              </h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-stone-400 
+                           hover:text-stone-600 
+                           text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <ServiceForm
+              initial={editingService ? {
+                ...editingService,
+                duration_minutes: editingService.duration_minutes ?? 0,
+                price: editingService.price ?? 0,
+                category: editingService.category ?? undefined,
+                is_active: editingService.is_active ?? true
+              } : undefined}
+              onSaved={() => {
+                setShowForm(false)
+                setEditingService(null)
+                loadServices()
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

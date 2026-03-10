@@ -1,45 +1,243 @@
-# Serenity Spa — Architecture
+# Architecture
+> Last updated: Batch 9 (March 2026)
 
-**Overview:**
-- Tech stack: Next.js (App Router), TypeScript, React, Tailwind CSS, Supabase (Postgres + Auth + Realtime).
-- Purpose: SPA-style marketing site with booking flows, an admin area for CRUD over services/therapists/schedules/bookings/messages, and API routes for booking availability/locking/confirming.
+## Layer diagram (ASCII art)
+┌─────────────────────────────────────┐
+│             UI Layer                │
+│  app/(public) · (customer) · (admin)│
+│  components/                        │
+└──────────────┬──────────────────────┘
+│ fetch / server action
+▼
+┌─────────────────────────────────────┐
+│             API Layer               │
+│  app/api/**  route handlers         │
+│  Zod validation · auth guards       │
+└──────────────┬──────────────────────┘
+│ calls service functions
+▼
+┌─────────────────────────────────────┐
+│         Application Layer           │
+│  lib/application/  services         │
+│  business logic · orchestration     │
+└──────────────┬──────────────────────┘
+│ calls repos
+▼
+┌─────────────────────────────────────┐
+│        Infrastructure Layer         │
+│  lib/infra/supabase/  repos         │
+│  lib/infra/resend/                  │
+│  lib/infra/upstash/                 │
+└──────────────┬──────────────────────┘
+│
+▼
+┌─────────────────────────────────────┐
+│         External Services           │
+│  Supabase DB · Resend · Upstash     │
+│  Supabase Storage                   │
+└─────────────────────────────────────┘
 
-**High-level components**
-- `app/` — Next.js routes and layouts. Server components host data fetching; client components live under `components/`.
-- `components/` — Reusable UI pieces (booking wizard, service cards, admin forms).
-- `app/api/` — Route handlers for customer-facing and admin APIs (booking, contact, profile, admin CRUD).
-- `lib/` — Shared helpers: `supabase` (server/browser clients), `services` (authService), `db` (small data access helpers), `utils` (validation, logger).
+## Layer rules
 
-**Core flows**
-- Auth: Supabase session + `lib/services/authService.ts` plus `middleware.ts` that protects customer/admin routes.
-- Booking: `components/booking/BookingWizard.tsx` → availability `/api/booking/availability` → lock `/api/booking/lock` → confirm `/api/booking/confirm`.
-- Admin: Server pages under `app/(admin)/...` call `lib/db/*` helpers (which use the server Supabase client) and client components call admin API routes under `app/api/admin/*`.
+### UI Layer (components/, app/ pages)
+**Can import from:**
+- Other UI components
+- lib/utils/ (shared utilities)
+- lib/domain/types.ts (type definitions only)
+- lib/config/constants.ts
 
-**Data model (core tables — representative)**
-- `services` — id, name, category, duration_minutes, price, thumbnail_url, is_active, is_featured
-- `therapists` — id, name, title, photo_url, bio_short, bio
-- `therapist_service` — service_id, therapist_id (many-to-many)
-- `time_slots` — id, therapist_id, start_time, end_time, capacity, locked_until, is_booked
-- `bookings` — id, service_id, therapist_id, time_slot_id, customer_name, customer_contact, status, notes, created_at
-- `profiles` — user_id, role (admin/customer), name, phone
-- `messages` (contact/admin messaging) — id, name, email, subject, body, is_read, created_at
+**Cannot import from:**
+- lib/infra/ (infrastructure clients)
+- lib/application/ (business logic)
+- External service libraries (Supabase, Resend, etc.)
 
-Note: This project expects these tables to exist in Supabase; see SUPABASE.md for schema details and sample seeds.
+### API Routes Layer (app/api/)
+**Can import from:**
+- lib/application/ (business logic services)
+- lib/utils/validation.ts (Zod schemas)
+- lib/utils/errorMapper.ts
+- lib/infra/supabase/currentUser.ts (auth helpers)
 
-**Design decisions & rationale**
-- Server-side Supabase client (`lib/supabase/server.ts`) uses the Service Role key for secure server operations (admin CRUD and writes). Browser client uses anon/public key.
-- Minimal server-side DB helpers (`lib/db/*`) are thin wrappers that centralize error handling and response shaping.
-- App Router + Server Components: data-fetching for admin pages runs on the server where possible (reduces client bundle and leverages service role client safely).
-- Simplicity over abstraction: the code uses small, explicit helpers (no heavy ORMs) to keep the learning curve low and make the SQL/Postgres behavior visible.
+**Cannot import from:**
+- lib/infra/ (direct infrastructure access)
+- External service libraries (use services instead)
 
-**Trade-offs & future considerations**
-- Current approach uses service-role key for server helpers; ensure that production processes rotate and protect keys (use secrets manager).
-- Optionally add row-level security (RLS) policies on Supabase to further restrict operations rather than relying only on server code.
-- Move DB helpers to a small repository-level data access layer if complexity grows (DRY queries, pagination, advanced filtering).
+### Application Services Layer (lib/application/)
+**Can import from:**
+- lib/domain/ (types, errors)
+- lib/config/constants.ts
+- lib/utils/ (date formatting, etc.)
+- lib/infra/ (repositories only)
 
-**Where to look**
-- Booking flow: `components/booking/BookingWizard.tsx`, `app/api/booking/*`
-- Auth + middleware: `lib/services/authService.ts`, `middleware.ts`
-- Admin pages: `app/(admin)/*`, `app/api/admin/*`
-- Supabase helpers: `lib/supabase/*`
+**Cannot import from:**
+- HTTP-specific code (NextResponse, Request)
+- UI components
+- External services directly (use repositories)
 
+### Infrastructure Layer (lib/infra/)
+**Can import from:**
+- External service libraries (Supabase, Resend, Upstash)
+- lib/utils/logger.ts
+- lib/domain/ (types only, no business logic)
+
+**Cannot import from:**
+- lib/application/ (business logic)
+- UI components
+- HTTP concerns
+
+## Request lifecycle
+
+Browser request
+│
+▼
+middleware.ts — session check
+│
+┌──┴──┐
+yes    no
+│      └──▶ redirect /auth/login
+▼
+app/api/route handler
+│
+▼
+requireAdmin() / requireCustomer()
+│
+▼
+Zod.parse(body) — 400 if invalid
+│
+▼
+service function (lib/application/)
+│
+▼
+repo function (lib/infra/supabase/)
+│
+▼
+Supabase client → DB query
+│
+▼
+domain object returned
+│
+▼
+NextResponse.json() — HTTP response
+
+## Auth flow
+
+Request to /admin/* or /dashboard/*
+│
+▼
+middleware.ts reads Supabase session cookie
+│
+┌──┴───────────────┐
+no session          session exists
+│                     │
+▼                  check role
+redirect             ┌───┴───┐
+/auth/login        admin  customer
+│        │
+/admin/*   /dashboard
+/profile   /book
+│        │
+requireAdmin  requireCustomer
+│        │
+403 if not  401 if no
+admin      session
+
+### Middleware protected routes:
+```typescript
+// middleware.ts
+const CUSTOMER_PATHS = ["/dashboard", "/profile", "/book"];
+const ADMIN_PREFIX = "/admin";
+
+// Customer route protection
+if (isCustomerRoute && !session?.user) {
+  return NextResponse.redirect("/auth/login?next=...");
+}
+
+// Admin route protection  
+if (isAdminRoute) {
+  if (!session?.user) return NextResponse.redirect("/auth/login");
+  const profile = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .single();
+  if (profile.role !== "admin") {
+    return NextResponse.redirect("/");
+  }
+}
+```
+
+## Error handling pattern
+
+Domain error thrown in service
+e.g. NotFoundError, ConflictError
+│
+▼
+bubbles to route handler catch block
+│
+▼
+mapErrorToLegacyHttp(error)
+┌─────────────────────────┐
+│ NotFoundError   → 404   │
+│ ForbiddenError  → 403   │
+│ ConflictError   → 409   │
+│ ValidationError → 400   │
+│ Unknown         → 500   │
+└─────────────────────────┘
+│
+▼
+NextResponse.json(body, { status })
+{ error: "message", code: "CODE" }
+
+### Error response shape:
+```typescript
+interface ErrorResponse {
+  error: string;    // Human readable message
+  code: string;      // Machine readable code
+}
+```
+
+## Rate limiting pattern
+
+### Upstash Redis sliding window:
+```typescript
+// lib/infra/upstash/ratelimit.ts
+export const authRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, "15 m"), // 10 requests per 15 minutes
+      analytics: true,
+      prefix: "ratelimit:auth",
+    })
+  : null;
+
+// Usage in API route
+const ip = request.ip || "unknown";
+const { blocked } = await checkRateLimit(`login:${ip}`, authRatelimit);
+if (blocked) {
+  return NextResponse.json(
+    { error: "Too many requests", code: "RATE_LIMITED" },
+    { status: 429 }
+  );
+}
+```
+
+### Graceful degradation:
+- If Redis not configured (development), `checkRateLimit()` returns `blocked: false`
+- Rate limiting is production-only feature
+- No Redis dependency blocks development workflow
+
+### Protected endpoints:
+- POST /api/auth/login
+- POST /api/auth/register  
+- POST /api/auth/magic-link
+- POST /api/auth/reset-password
+
+### Identifier pattern:
+`"endpoint:ip_address"` - e.g., `"login:192.168.1.100"`
+
+### Headers returned on rate limit:
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 3
+X-RateLimit-Reset: 1704067200000
+```

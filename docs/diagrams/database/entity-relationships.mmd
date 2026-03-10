@@ -1,0 +1,62 @@
+erDiagram
+  profiles {
+    uuid id PK
+    text name
+    text phone
+    text role
+    text avatar_url
+  }
+  bookings {
+    uuid id PK
+    uuid customer_id FK
+    uuid time_slot_id FK
+    uuid service_id FK
+    uuid therapist_id FK
+    text status
+    text notes
+    text reference_code
+    timestamptz created_at
+  }
+  time_slots {
+    uuid id PK
+    uuid therapist_id FK
+    timestamptz start_time
+    timestamptz end_time
+    boolean is_available
+    timestamptz locked_until
+  }
+  services {
+    uuid id PK
+    text name
+    text category
+    int duration_minutes
+    numeric price
+    text description
+    boolean is_active
+  }
+  service_images {
+    uuid id PK
+    uuid service_id FK
+    text image_url
+    int display_order
+  }
+  therapists {
+    uuid id PK
+    text name
+    text title
+    text bio
+    text photo_url
+    boolean is_active
+  }
+  service_therapists {
+    uuid service_id FK
+    uuid therapist_id FK
+  }
+
+  profiles ||--o{ bookings : "customer_id"
+  time_slots ||--o{ bookings : "time_slot_id"
+  services ||--o{ bookings : "service_id"
+  therapists ||--o{ bookings : "therapist_id"
+  therapists ||--o{ time_slots : "therapist_id"
+  services ||--o{ service_images : "service_id"
+  services }o--o{ therapists : "service_therapists"

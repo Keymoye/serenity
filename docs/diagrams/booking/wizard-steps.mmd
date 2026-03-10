@@ -1,0 +1,16 @@
+flowchart LR
+  S1["Step 1\nSelect Service\nGET /api/services"]
+  S2["Step 2\nSelect Therapist\nGET /api/services/id/therapists"]
+  S3["Step 3\nSelect Date & Time\nPOST /api/booking/availability"]
+  S4["Step 4\nConfirm Booking\nPOST /api/booking/confirm"]
+  DONE["✅ Booking Created\nRedirect /dashboard"]
+  LERR["Lock failed\n409 ConflictError\nRe-fetch availability"]
+  CERR["Confirm failed\n409 ConflictError\nStay on step 4"]
+
+  S1 --> S2 --> S3
+  S3 -->|slot selected| LOCK["POST /api/booking/lock"]
+  LOCK -->|TRUE| S4
+  LOCK -->|FALSE| LERR
+  LERR --> S3
+  S4 --> DONE
+  S4 -->|conflict| CERR

@@ -1,0 +1,460 @@
+import type { Service, ServiceImage, ServiceImageAddInput } from "../../domain/service.types";
+import { getSupabaseUserClient } from "./userClient";
+import { getSupabaseAdminClient } from "./adminClient";
+import { ADMIN_LIST_LIMIT } from "../../config/constants";
+
+export interface ServiceRepository {
+  listActiveServices(): Promise<Service[]>;
+  listPublicServiceSummaries(category?: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      category: string | null;
+      duration_minutes: number | null;
+      price: number | null;
+      description: string | null;
+      first_image_url: string | null;
+    }>
+  >;
+  getPublicServiceDetail(serviceId: string): Promise<{
+    service: Service | null;
+    images: ServiceImage[];
+    therapists: Array<{
+      id: string;
+      name: string;
+      title: string | null;
+      photo_url: string | null;
+      bio_short: string | null;
+    }>;
+  }>;
+  listTherapistsForService(serviceId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      title: string | null;
+      photo_url: string | null;
+      bio_short: string | null;
+      is_active?: boolean | null;
+    }>
+  >;
+  listServicesForTherapist(therapistId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      category: string | null;
+      duration_minutes: number | null;
+      price: number | null;
+    }>
+  >;
+  listAllServicesWithFirstImage(): Promise<Array<Service & {
+      first_image_url: string | null
+    }>>;
+  listAllServices(): Promise<Service[]>;
+  createService(payload: Omit<Service, "id" | "updated_at">): Promise<Service>;
+  updateService(id: string, payload: Partial<Omit<Service, "id">>): Promise<Service>;
+  deleteService(id: string): Promise<void>;
+  isTherapistAssignedToService(serviceId: string, therapistId: string): Promise<boolean>;
+  assignServicesToTherapist(therapistId: string, serviceIds: string[]): Promise<void>;
+  assignTherapistsToService(serviceId: string, therapistIds: string[]): Promise<void>;
+  listAllServicesAdmin(): Promise<Array<{ id: string; name: string; category: string | null }>>;
+  listAllTherapistsAdmin(): Promise<Array<{ id: string; name: string; title: string | null }>>;
+  addServiceImage(input: ServiceImageAddInput): Promise<ServiceImage>;
+  deleteServiceImage(id: string): Promise<void>;
+  listServiceImages(serviceId: string): Promise<ServiceImage[]>;
+}
+
+export function createServiceRepository(): ServiceRepository {
+  return {
+    async listActiveServices() {
+      const supabase = await getSupabaseUserClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Service[];
+    },
+
+    async listPublicServiceSummaries(category?: string) {
+      const supabase = await getSupabaseUserClient();
+      let query = supabase
+        .from("services")
+        .select(`
+          id, name, category,
+          duration_minutes, price, description,
+          is_active,
+          service_images (
+            image_url,
+            sort_order
+          )
+        `)
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (category) {
+        query = query.eq("category", category);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []).map((s: {
+        id: string;
+        name: string;
+        category: string | null;
+        duration_minutes: number | null;
+        price: number | null;
+        description: string | null;
+        is_active: boolean;
+        service_images?: Array<{
+          image_url: string;
+          sort_order: number | null;
+        }>;
+      }) => {
+        const images = (s.service_images ?? [])
+          .sort((a: { sort_order: number | null }, b: { sort_order: number | null }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          )
+        return {
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          duration_minutes: s.duration_minutes,
+          price: s.price,
+          description: s.description,
+          first_image_url: images[0]?.image_url ?? null,
+        }
+      });
+    },
+
+    async getPublicServiceDetail(serviceId: string) {
+      const supabase = await getSupabaseAdminClient();
+
+      const { data: service, error: serviceError } = await supabase
+        .from("services")
+        .select(
+          "id, name, category, duration_minutes, price, description, is_active",
+        )
+        .eq("id", serviceId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (serviceError) throw serviceError;
+      if (!service) {
+        return { service: null, images: [], therapists: [] };
+      }
+
+      const [
+        { data: images, error: imagesError },
+        { data: therapistRows, error: therapistsError },
+      ] = await Promise.all([
+        supabase
+          .from("service_images")
+          .select("id, image_url, sort_order")
+          .eq("service_id", serviceId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("therapist_service")
+          .select("therapists(id, name, title, photo_url, bio_short)")
+          .eq("service_id", serviceId),
+      ]);
+
+      if (imagesError) throw imagesError;
+      if (therapistsError) throw therapistsError;
+
+      type Therapist = {
+        id: string;
+        name: string;
+        title: string | null;
+        photo_url: string | null;
+        bio_short: string | null;
+      };
+      type RawTherapistRow = { therapists?: Therapist | null };
+      const therapists: Therapist[] = (
+        (therapistRows ?? []) as unknown as RawTherapistRow[]
+      )
+        .map((row) => row.therapists)
+        .filter((t): t is Therapist => Boolean(t));
+
+      return {
+        service: service as Service,
+        images: (images ?? []) as ServiceImage[],
+        therapists,
+      };
+    },
+
+    async listTherapistsForService(serviceId: string) {
+      const supabase = await getSupabaseUserClient();
+      const { data, error } = await supabase
+        .from("therapist_service")
+        .select("therapists(id, name, title, photo_url, bio_short, is_active)")
+        .eq("service_id", serviceId);
+      if (error) throw error;
+
+      type Therapist = { id: string; name: string; title: string | null; photo_url: string | null; bio_short: string | null; is_active?: boolean | null };
+      type RawRow = { therapists: Therapist | null };
+      const rows = (data ?? []) as unknown as RawRow[];
+      return rows
+        .map((r) => r.therapists)
+        .filter((t): t is Therapist => Boolean(t));
+    },
+    async listServicesForTherapist(therapistId: string) {
+      const supabase = await getSupabaseUserClient();
+      const { data, error } = await supabase
+        .from("therapist_service")
+        .select("services(id, name, category, duration_minutes, price)")
+        .eq("therapist_id", therapistId)
+        .eq("services.is_active", true);
+      if (error) throw error;
+
+      type ServiceRow = {
+        services?: {
+          id: string;
+          name: string;
+          category: string | null;
+          duration_minutes: number | null;
+          price: number | null;
+        } | null;
+      };
+      const rows = (data ?? []) as unknown as ServiceRow[];
+      return rows
+        .map((r) => r.services)
+        .filter((s): s is NonNullable<ServiceRow["services"]> => Boolean(s));
+    },
+
+
+    async listAllServices() {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(ADMIN_LIST_LIMIT);
+      if (error) throw error;
+      return (data ?? []) as Service[];
+    },
+
+    async createService(payload) {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .insert(payload)
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
+        .single();
+      if (error) throw error;
+      return data as Service;
+    },
+
+    async updateService(id, payload) {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .update(payload)
+        .eq("id", id)
+        .select("id, name, category, duration_minutes, price, description, is_active, updated_at")
+        .single();
+      if (error) throw error;
+      return data as Service;
+    },
+
+    async deleteService(id) {
+      const supabase = await getSupabaseAdminClient();
+      const { error } = await supabase.from("services").delete().eq("id", id);
+      if (error) throw error;
+    },
+
+    async isTherapistAssignedToService(serviceId, therapistId) {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("therapist_service")
+        .select("id")
+        .eq("service_id", serviceId)
+        .eq("therapist_id", therapistId)
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data);
+    },
+
+    async assignServicesToTherapist(
+      therapistId: string,
+      serviceIds: string[]
+    ): Promise<void> {
+      const supabase = await getSupabaseAdminClient();
+
+      // First delete all existing assignments for therapist
+      const { error: deleteError } = await supabase
+        .from('therapist_service')
+        .delete()
+        .eq('therapist_id', therapistId);
+
+      if (deleteError) throw deleteError;
+
+      // If no services to assign, we are done
+      if (serviceIds.length === 0) return;
+
+      // Insert new assignments
+      const rows = serviceIds.map((serviceId) => ({
+        therapist_id: therapistId,
+        service_id: serviceId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('therapist_service')
+        .insert(rows);
+
+      if (insertError) throw insertError;
+    },
+
+    async assignTherapistsToService(
+      serviceId: string,
+      therapistIds: string[]
+    ): Promise<void> {
+      const supabase = await getSupabaseAdminClient();
+
+      // First delete all existing assignments for service
+      const { error: deleteError } = await supabase
+        .from('therapist_service')
+        .delete()
+        .eq('service_id', serviceId);
+
+      if (deleteError) throw deleteError;
+
+      // If no therapists to assign, we are done
+      if (therapistIds.length === 0) return;
+
+      // Insert new assignments
+      const rows = therapistIds.map((therapistId) => ({
+        service_id: serviceId,
+        therapist_id: therapistId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('therapist_service')
+        .insert(rows);
+
+      if (insertError) throw insertError;
+    },
+
+    async listAllServicesAdmin(): Promise<
+      Array<{ id: string; name: string; category: string | null }>
+    > {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, category')
+        .order('name');
+
+      if (error) throw error;
+      return data ?? [];
+    },
+
+    async listAllTherapistsAdmin(): Promise<
+      Array<{ id: string; name: string; title: string | null }>
+    > {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from('therapists')
+        .select('id, name, title')
+        .order('name');
+
+      if (error) throw error;
+      return data ?? [];
+    },
+
+    // Add a single image to service gallery
+    async addServiceImage(
+      input: ServiceImageAddInput
+    ): Promise<ServiceImage> {
+      const supabase = await getSupabaseAdminClient()
+      const { data, error } = await supabase
+        .from('service_images')
+        .insert({
+          service_id: input.service_id,
+          image_url: input.image_url,
+          sort_order: input.sort_order ?? null,
+        })
+        .select('id, service_id, image_url, sort_order')
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    // Delete a single image from service gallery
+    async deleteServiceImage(id: string): Promise<void> {
+      const supabase = await getSupabaseAdminClient()
+      const { error } = await supabase
+        .from('service_images')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+
+    // List all images for a service (admin use)
+    async listServiceImages(
+      serviceId: string
+    ): Promise<ServiceImage[]> {
+      const supabase = await getSupabaseAdminClient()
+      const { data, error } = await supabase
+        .from('service_images')
+        .select('id, service_id, image_url, sort_order')
+        .eq('service_id', serviceId)
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+      return data ?? []
+    },
+
+    // List all services with first image for admin
+    async listAllServicesWithFirstImage(): Promise<Array<Service & {
+      first_image_url: string | null
+    }>> {
+      const supabase = await getSupabaseAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select(`
+          id, name, category,
+          duration_minutes, price, description,
+          is_active, updated_at,
+          service_images (
+            image_url,
+            sort_order
+          )
+        `)
+        .order("updated_at", { ascending: false })
+        .limit(ADMIN_LIST_LIMIT);
+      
+      if (error) throw error;
+      
+      return (data ?? []).map((s: {
+        id: string;
+        name: string;
+        category: string | null;
+        duration_minutes: number | null;
+        price: number | null;
+        description: string | null;
+        is_active: boolean;
+        updated_at: string;
+        service_images?: Array<{
+          image_url: string;
+          sort_order: number | null;
+        }>;
+      }) => {
+        const images = (s.service_images ?? [])
+          .sort((a: { sort_order: number | null }, b: { sort_order: number | null }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          );
+        return {
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          duration_minutes: s.duration_minutes,
+          price: s.price,
+          description: s.description,
+          is_active: s.is_active,
+          updated_at: s.updated_at,
+          first_image_url: images[0]?.image_url ?? null,
+        };
+      });
+    },
+  };
+}
+

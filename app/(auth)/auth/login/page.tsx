@@ -1,157 +1,239 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useState, Suspense } from "react";
 import { loginSchema } from "@/lib/utils/validation";
 import type { LoginInput } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
-
-type FormState = {
-  values: LoginInput;
-  error: string | null;
-  isSubmitting: boolean;
-};
+import { postJson, useApi } from "@/lib/utils/api";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
 
 const INITIAL_VALUES: LoginInput = {
   email: "",
   password: "",
 };
 
-export default function LoginPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+function LoginContent() {
+  const { loading, error, call, setError } = useApi();
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"magic-link" | "password">("magic-link");
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [values, setValues] = useState<LoginInput>(INITIAL_VALUES);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const [state, setState] = useState<FormState>({
-    values: INITIAL_VALUES,
-    error: null,
-    isSubmitting: false,
-  });
-
-  const handleChange = (field: keyof LoginInput) => 
+  const handleChange = (field: keyof LoginInput) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [field]: value },
-      }));
+      setValues((v) => ({ ...v, [field]: event.target.value }));
+      if (fieldErrors[field]) {
+        setFieldErrors(prev => ({ ...prev, [field]: '' }));
+      }
     };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleMagicLinkSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
 
-    setState((prev) => ({ ...prev, error: null, isSubmitting: true }));
-
-    const parsed = loginSchema.safeParse(state.values);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setState((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
+    if (!magicLinkEmail.trim()) {
+      setError("Email is required.");
       return;
     }
 
-    try {
-      const supabase = getBrowserSupabaseClient();
+    const success = await call(async () =>
+      postJson("/api/auth/magic-link", { email: magicLinkEmail })
+    );
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: parsed.data.email,
-        password: parsed.data.password,
-      });
+    if (success !== null) {
+      setMagicLinkSent(true);
+      setMagicLinkEmail("");
+    }
+  };
 
-      if (error) {
-        logger.error("Login failed", error);
-        setState((prev) => ({
-          ...prev,
-          error: "Invalid email or password.",
-          isSubmitting: false,
-        }));
-        return;
+  const handlePasswordSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    const parsed = loginSchema.safeParse(values);
+    if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string
+        if (field) errs[field] = issue.message
+      })
+      setFieldErrors(errs)
+      setError(parsed.error.issues[0]?.message || "Invalid input.");
+      return;
+    }
+    setFieldErrors({})
+
+    const success = await call(async () =>
+      postJson("/api/auth/login", parsed.data)
+    );
+
+    if (success !== null) {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      
+      let redirectPath = "/dashboard";
+
+      if (next) {
+        const decoded = decodeURIComponent(next);
+        if (decoded.includes("serviceId=")) {
+          redirectPath = decoded;
+        }
       }
 
-      const next = searchParams.get("next");
-      router.push(next || "/dashboard");
-    } catch (error) {
-      logger.error("Unexpected error during login", error);
-      setState((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
+      if (redirectPath === "/dashboard") {
+        try {
+          const pendingId = sessionStorage.getItem("pendingServiceId");
+          if (pendingId) {
+            sessionStorage.removeItem("pendingServiceId");
+            redirectPath = `/book?serviceId=${pendingId}`;
+          }
+        } catch {
+          // sessionStorage unavailable
+        }
+      }
+
+      window.location.href = redirectPath;
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-semibold text-slate-900">
-          Login
-        </h1>
+    <SectionWrapper>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <h1 className="mb-6 text-2xl font-semibold text-slate-900">Login</h1>
 
-        {state.error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {state.error}
+          <OAuthButtons />
+
+          <div aria-live="polite" role="alert">
+            {error && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-slate-700"
+          {/* Tab Navigation */}
+          <div className="mb-6 flex gap-2 border-b border-slate-200">
+            <button
+              onClick={() => {
+                setActiveTab("magic-link");
+                setError(null);
+                setMagicLinkSent(false);
+              }}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "magic-link"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
             >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={state.values.email}
-              onChange={handleChange("email")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-slate-700"
+              Magic Link
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("password");
+                setError(null);
+              }}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "password"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
             >
               Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={state.values.password}
-              onChange={handleChange("password")}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              required
-            />
+            </button>
           </div>
 
-          <button
-            type="submit"
-            disabled={state.isSubmitting}
-            className="flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-          >
-            {state.isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+          {/* Magic Link Tab */}
+          {activeTab === "magic-link" && (
+            <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
+              {magicLinkSent ? (
+                <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+                  Check your email — we sent you a login link. Click it to sign in.
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="magic-email"
+                    label="Email"
+                    type="email"
+                    autoComplete="email"
+                    value={magicLinkEmail}
+                    onChange={(e) => {
+                      setMagicLinkEmail(e.target.value)
+                      if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }))
+                    }}
+                    required
+                    error={fieldErrors.email}
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    loading={loading}
+                    className="w-full"
+                  >
+                    Send magic link
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
 
-        <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
-          <a href="/auth/register" className="hover:text-sky-700">
-            Create account
-          </a>
-          <a href="/auth/reset-password" className="hover:text-sky-700">
-            Forgot password?
-          </a>
-        </div>
+          {/* Password Tab */}
+          {activeTab === "password" && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <Input
+                id="email"
+                label="Email"
+                type="email"
+                autoComplete="email"
+                value={values.email}
+                onChange={handleChange("email")}
+                required
+                error={fieldErrors.email}
+              />
+
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                value={values.password}
+                onChange={handleChange("password")}
+                required
+                error={fieldErrors.password}
+              />
+
+              <Button type="submit" variant="primary" loading={loading} className="w-full">
+                Sign in
+              </Button>
+            </form>
+          )}
+
+          <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
+            <a href="/auth/register" className="hover:text-sky-700">
+              Create account
+            </a>
+            <a href="/auth/reset-password" className="hover:text-sky-700">
+              Forgot password?
+            </a>
+          </div>
+        </Card>
       </div>
-    </div>
+    </SectionWrapper>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
 

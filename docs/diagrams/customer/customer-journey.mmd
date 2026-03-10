@@ -1,0 +1,15 @@
+flowchart TD
+  LAND["Landing page /\nHero · Featured services\nCTA: Book now"]
+  SVCS["Services /services\nBrowse all treatments\nFilter by category"]
+  SVC1["Service detail /services/id\nGallery · Duration · Price\nTherapists · Book now"]
+  BOOK["Booking wizard /book\n4-step flow"]
+  DASH["Dashboard /dashboard\nHero image · User summary\nUpcoming appointments\nPast visits"]
+  PROF["Profile /profile\nEdit name · phone\nUpload avatar photo\nChange password"]
+  THRP["Therapist /therapists/id\nBio · Services offered"]
+  CANC["Cancel booking\nConfirmDialog → DELETE\nSlot reopened\nEmail sent"]
+
+  LAND --> SVCS --> SVC1 --> BOOK --> DASH
+  LAND --> THRP
+  DASH --> PROF
+  DASH --> CANC
+  DASH --> BOOK

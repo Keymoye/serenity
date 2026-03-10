@@ -1,28 +1,19 @@
 import { NextResponse } from "next/server";
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
+import { randomUUID } from "crypto";
+import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
+import { logout } from "@/lib/application/auth.service";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "auth.logout" });
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      logger.error("Supabase sign-out failed", error);
-      return NextResponse.json(
-        { error: "Failed to sign out.", code: "SIGN_OUT_FAILED" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
+    await logout();
+    return NextResponse.redirect(new URL('/', request.url));
   } catch (error) {
-    logger.error("Unexpected error in logout route", error);
-    return NextResponse.json(
-      { error: "Internal server error.", code: "INTERNAL_ERROR" },
-      { status: 500 }
-    );
+    log.error("Unexpected error in logout route", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 

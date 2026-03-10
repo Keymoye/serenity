@@ -1,0 +1,48 @@
+mindmap
+  root((API Routes))
+    Auth
+      POST /api/auth/login
+      POST /api/auth/register
+      POST /api/auth/logout
+      POST /api/auth/magic-link
+      POST /api/auth/reset-password
+      POST /api/auth/reset-password/confirm
+    Booking
+      POST /api/booking/availability
+      POST /api/booking/lock
+      POST /api/booking/confirm
+      DELETE /api/booking/id
+    Services
+      GET /api/services
+      GET /api/services/id/therapists
+    Profile
+      GET /api/profile
+      PATCH /api/profile
+      PATCH /api/profile/password
+      POST /api/profile/upload
+    Public
+      POST /api/contact
+      GET /api/settings
+    Admin-Services
+      GET /api/admin/services
+      POST /api/admin/services
+      PUT /api/admin/services/id
+      DELETE /api/admin/services/id
+      POST /api/admin/services/id/images
+      DELETE /api/admin/services/id/images
+    Admin-Therapists
+      GET /api/admin/therapists
+      POST /api/admin/therapists
+      PUT /api/admin/therapists/id
+      DELETE /api/admin/therapists/id
+    Admin-Bookings
+      GET /api/admin/bookings
+      PATCH /api/admin/bookings/id
+      DELETE /api/admin/bookings/id
+    Admin-Slots
+      GET /api/admin/time-slots
+      POST /api/admin/time-slots
+      DELETE /api/admin/time-slots/id
+    Admin-Upload
+      POST /api/admin/upload
+      DELETE /api/admin/upload

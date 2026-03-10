@@ -1,0 +1,33 @@
+sequenceDiagram
+  participant B as Browser
+  participant M as middleware.ts
+  participant R as Route Handler
+  participant G as Auth Guard
+  participant Z as Zod
+  participant S as Service
+  participant Rp as Repo
+  participant DB as Supabase DB
+
+  B->>M: HTTP request
+  M->>M: check session cookie
+  alt no session
+    M-->>B: redirect /auth/login
+  end
+  M->>R: forward request
+  R->>G: requireAdmin() / requireCustomer()
+  alt not authorized
+    G-->>R: throw ForbiddenError
+    R-->>B: 403 JSON
+  end
+  R->>Z: parse(body)
+  alt invalid body
+    Z-->>R: ZodError
+    R-->>B: 400 JSON
+  end
+  R->>S: service function(payload)
+  S->>Rp: repo function(args)
+  Rp->>DB: SQL query
+  DB-->>Rp: rows
+  Rp-->>S: domain object
+  S-->>R: result
+  R-->>B: NextResponse.json() 200/201

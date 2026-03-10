@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { formatPrice } from "@/lib/utils/format";
 
 export type ServiceSummary = {
   id: string;
@@ -6,7 +7,8 @@ export type ServiceSummary = {
   category: string | null;
   duration_minutes: number | null;
   price: number | null;
-  thumbnail_url: string | null;
+  description: string | null;
+  first_image_url: string | null;
 };
 
 interface ServiceCardProps {
@@ -15,7 +17,7 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, href }: ServiceCardProps) {
-  const { name, category, duration_minutes, price, thumbnail_url } = service;
+  const { name, category, duration_minutes, price, first_image_url } = service;
 
   return (
     <a
@@ -23,16 +25,23 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
       className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative h-40 w-full bg-slate-100">
-        {thumbnail_url ? (
-          <Image
-            src={thumbnail_url}
-            alt={name}
-            fill
-            className="object-cover"
-          />
+        {first_image_url ? (
+          <div className="relative w-full h-full">
+            <Image
+              src={first_image_url}
+              alt={name}
+              fill
+              className="object-cover"
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-            No image
+          <div 
+            className="flex h-full w-full items-center justify-center text-xs text-slate-400"
+            role="img"
+            aria-label={`No image available for ${name}`}
+          >
+            <span aria-hidden="true">No image</span>
           </div>
         )}
       </div>
@@ -44,7 +53,7 @@ export function ServiceCard({ service, href }: ServiceCardProps) {
           </h3>
           {price != null && (
             <span className="whitespace-nowrap text-sm font-semibold text-slate-900">
-              ${price.toFixed(2)}
+              {formatPrice(price)}
             </span>
           )}
         </div>

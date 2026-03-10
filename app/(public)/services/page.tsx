@@ -1,7 +1,14 @@
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/utils/logger";
 import { ServiceCard, type ServiceSummary } from "@/components/ServiceCard";
 import Link from "next/link";
+import { listPublicServices } from "@/lib/application/service.service";
+import { SectionWrapper } from "@/components/layout/SectionWrapper";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Services — Serenity Spa",
+  description: "Explore our full catalog of spa treatments, massages, facials, and wellness services.",
+};
 
 type ServicesPageProps = {
   searchParams: {
@@ -11,28 +18,8 @@ type ServicesPageProps = {
 
 async function getServices(category?: string): Promise<ServiceSummary[]> {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    let query = supabase
-      .from("services")
-      .select(
-        "id, name, category, duration_minutes, price, thumbnail_url, is_active"
-      )
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      logger.error("Failed to load services", error, { category });
-      return [];
-    }
-
-    return (data ?? []) as ServiceSummary[];
+    const rows = await listPublicServices({ category });
+    return (rows ?? []) as unknown as ServiceSummary[];
   } catch (error) {
     logger.error("Unexpected error while loading services", error, {
       category,
@@ -42,7 +29,7 @@ async function getServices(category?: string): Promise<ServiceSummary[]> {
 }
 
 export default async function ServicesPage({ searchParams }: ServicesPageProps) {
-  const category = searchParams.category;
+  const { category } = (await searchParams) ?? {};
   const services = await getServices(category);
 
   const categories = Array.from(
@@ -54,64 +41,72 @@ export default async function ServicesPage({ searchParams }: ServicesPageProps) 
   ).sort();
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Services
-        </h1>
-        <p className="text-sm text-slate-700">
-          Explore our full catalog of treatments. Choose a category to narrow
-          down your options.
-        </p>
-      </header>
+    <SectionWrapper>
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Services</h1>
+          <p className="text-sm text-slate-700">Explore our full catalog of treatments. Choose a category to narrow down your options.</p>
+        </header>
 
-      {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/services"
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
-              !category
-                ? "border-sky-600 bg-sky-50 text-sky-700"
-                : "border-slate-200 text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            All
-          </Link>
-          {categories.map((cat) => {
-            const isActive = category === cat;
-            return (
-              <Link
-                key={cat}
-                href={`/services?category=${encodeURIComponent(cat)}`}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                  isActive
-                    ? "border-sky-600 bg-sky-50 text-sky-700"
-                    : "border-slate-200 text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {cat}
-              </Link>
-            );
-          })}
-        </div>
-      )}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/services"
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                !category
+                  ? "border-sky-600 bg-sky-50 text-sky-700"
+                  : "border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              All
+            </Link>
+            {categories.map((cat) => {
+              const isActive = category === cat;
+              return (
+                <Link
+                  key={cat}
+                  href={`/services?category=${encodeURIComponent(cat)}`}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                    isActive
+                      ? "border-sky-600 bg-sky-50 text-sky-700"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {cat}
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-      {services.length === 0 ? (
-        <p className="text-sm text-slate-600">
-          No services are available at the moment. Please check back soon.
-        </p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              href={`/services/${service.id}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+        {services.length === 0 ? (
+          <div className="text-center py-12 space-y-3">
+            <p className="slate-700 font-medium">
+              No services available right now.
+            </p>
+            <p className="text-sm text-slate-500">
+              We&apos;re updating our offerings.
+              Please check back soon or contact
+              us for assistance.
+            </p>
+            <a href="/contact"
+               className="inline-block mt-2
+                          rounded-full border
+                          border-slate-300 px-4 py-1.5
+                          text-sm text-slate-700
+                          hover:bg-slate-50">
+              Contact us
+            </a>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((service) => (
+              <ServiceCard key={service.id} service={service} href={`/services/${service.id}`} />
+            ))}
+          </div>
+        )}
+      </div>
+    </SectionWrapper>
   );
 }
 

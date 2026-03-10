@@ -5,14 +5,8 @@ import {
   contactFormSchema,
   type ContactFormInput,
 } from "@/lib/utils/validation";
-import { logger } from "@/lib/utils/logger";
-
-type FormState = {
-  values: ContactFormInput;
-  error: string | null;
-  success: string | null;
-  isSubmitting: boolean;
-};
+import { postJson, useApi } from "@/lib/utils/api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const INITIAL_VALUES: ContactFormInput = {
   fullName: "",
@@ -23,107 +17,49 @@ const INITIAL_VALUES: ContactFormInput = {
 };
 
 export function ContactForm() {
-  const [state, setState] = useState<FormState>({
-    values: INITIAL_VALUES,
-    error: null,
-    success: null,
-    isSubmitting: false,
-  });
+  const { loading, error, call, setError } = useApi();
+  const [values, setValues] = useState<ContactFormInput>(INITIAL_VALUES);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleChange =
     (field: keyof ContactFormInput) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = event.target.value;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [field]: value },
-      }));
+      const v = event.target.value;
+      setValues((prev) => ({ ...prev, [field]: v }));
     };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
+    setSuccess(null);
 
-    setState((prev) => ({
-      ...prev,
-      error: null,
-      success: null,
-      isSubmitting: true,
-    }));
-
-    const parsed = contactFormSchema.safeParse(state.values);
+    const parsed = contactFormSchema.safeParse(values);
     if (!parsed.success) {
       const firstError = parsed.error.issues?.[0]?.message ?? "Invalid input.";
-      setState((prev) => ({
-        ...prev,
-        error: firstError,
-        isSubmitting: false,
-      }));
+      setError(firstError);
       return;
     }
 
-    try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(parsed.data),
-      });
+    const res = await call(() => postJson("/api/contact", parsed.data));
+    if (res === null) return; // error already handled
 
-      const body = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        logger.error("Contact form submission failed", null, {
-          status: response.status,
-          body,
-        });
-
-        if (body.code === "RATE_LIMIT") {
-          setState((prev) => ({
-            ...prev,
-            error:
-              "You have reached the maximum number of submissions. Please try again later.",
-            isSubmitting: false,
-          }));
-          return;
-        }
-
-        setState((prev) => ({
-          ...prev,
-          error: body.error || "Unable to send your message.",
-          isSubmitting: false,
-        }));
-        return;
-      }
-
-      setState({
-        values: INITIAL_VALUES,
-        error: null,
-        success:
-          "Thank you for reaching out. We’ve received your message and will get back to you shortly.",
-        isSubmitting: false,
-      });
-    } catch (error) {
-      logger.error("Unexpected error during contact form submission", error);
-      setState((prev) => ({
-        ...prev,
-        error: "Something went wrong. Please try again.",
-        isSubmitting: false,
-      }));
-    }
+    setValues(INITIAL_VALUES);
+    setSuccess(
+      "Thank you for reaching out. We’ve received your message and will get back to you shortly."
+    );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {state.error && (
+      {error && (
         <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {state.error}
+          {error}
         </div>
       )}
 
-      {state.success && (
+      {success && (
         <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.success}
+          {success}
         </div>
       )}
 
@@ -138,7 +74,7 @@ export function ContactForm() {
           <input
             id="fullName"
             type="text"
-            value={state.values.fullName}
+            value={values.fullName}
             onChange={handleChange("fullName")}
             className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
             required
@@ -155,7 +91,7 @@ export function ContactForm() {
             id="email"
             type="email"
             autoComplete="email"
-            value={state.values.email}
+            value={values.email}
             onChange={handleChange("email")}
             className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
             required
@@ -173,7 +109,7 @@ export function ContactForm() {
         <input
           id="phone"
           type="tel"
-          value={state.values.phone ?? ""}
+          value={values.phone ?? ""}
           onChange={handleChange("phone")}
           className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
         />
@@ -189,7 +125,7 @@ export function ContactForm() {
         <input
           id="subject"
           type="text"
-          value={state.values.subject}
+          value={values.subject}
           onChange={handleChange("subject")}
           className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
           required
@@ -206,7 +142,7 @@ export function ContactForm() {
         <textarea
           id="message"
           rows={5}
-          value={state.values.message}
+          value={values.message}
           onChange={handleChange("message")}
           className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
           required
@@ -215,10 +151,16 @@ export function ContactForm() {
 
       <button
         type="submit"
-        disabled={state.isSubmitting}
+        disabled={loading}
         className="inline-flex w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
       >
-        {state.isSubmitting ? "Sending..." : "Send message"}
+        {loading ? (
+          <>
+            <Spinner size={4} /> Sending...
+          </>
+        ) : (
+          "Send message"
+        )}
       </button>
     </form>
   );

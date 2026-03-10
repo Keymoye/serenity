@@ -1,13 +1,42 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { getServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/services/authService";
 import {
   profileUpdateSchema,
   type ProfileUpdateInput,
 } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
+import { mapErrorToLegacyHttp } from "@/lib/utils/errorMapper";
+import { updateProfile } from "@/lib/application/profile.service";
+import { createProfileRepository } from "@/lib/infra/supabase/profile.repo";
+
+export async function GET() {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "profile.get" });
+  
+  try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json(
+        { error: "Unauthorized.", code: "UNAUTHENTICATED" },
+        { status: 401 }
+      );
+    }
+
+    const profileRepo = createProfileRepository();
+    const profile = await profileRepo.findById(current.user.id);
+    
+    return NextResponse.json({ profile });
+  } catch (error) {
+    log.error("Unexpected error in profile get route", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
+  }
+}
 
 export async function PATCH(request: Request) {
+  const correlationId = randomUUID();
+  const log = logger.withContext({ correlationId, route: "profile.update" });
   try {
     const current = await getCurrentUser();
 
@@ -34,34 +63,20 @@ export async function PATCH(request: Request) {
     }
 
     const payload: ProfileUpdateInput = parsed.data;
-
-    const supabase = await getServerSupabaseClient();
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        name: payload.name,
+    await updateProfile(
+      { 
+        name: payload.name, 
         phone: payload.phone || null,
-      })
-      .eq("id", current.profile.id);
-
-    if (error) {
-      logger.error("Supabase profile update failed", error, {
-        profileId: current.profile.id,
-      });
-      return NextResponse.json(
-        { error: "Unable to update profile.", code: "UPDATE_FAILED" },
-        { status: 500 }
-      );
-    }
+        avatar_url: payload.avatar_url 
+      },
+      { userId: current.user.id, profileId: current.profile.id },
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error("Unexpected error in profile update route", error);
-    return NextResponse.json(
-      { error: "Internal server error.", code: "INTERNAL_ERROR" },
-      { status: 500 }
-    );
+    log.error("Unexpected error in profile update route", error);
+    const { status, body } = mapErrorToLegacyHttp(error);
+    return NextResponse.json(body, { status });
   }
 }
 

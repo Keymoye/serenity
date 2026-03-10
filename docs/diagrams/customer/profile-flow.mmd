@@ -1,0 +1,27 @@
+sequenceDiagram
+  participant U as Customer
+  participant PF as ProfileForm
+  participant IU as ImageUpload
+  participant UR as POST /api/profile/upload
+  participant PR as PATCH /api/profile
+  participant DB as profiles table
+
+  U->>PF: opens profile page
+  PF->>PF: loads current name\nphone · avatar_url
+
+  opt Upload new photo
+    U->>IU: selects photo file
+    IU->>IU: validate < 2MB, JPEG/PNG/WebP
+    IU->>UR: POST multipart/form-data { file }
+    UR->>UR: requireCustomer()\nbucket = avatar-uploads
+    UR-->>IU: 201 { url }
+    IU->>PF: onUpload(url)\nsetAvatarUrl(url)
+  end
+
+  U->>PF: edits name / phone
+  U->>PF: clicks Save
+  PF->>PR: PATCH { name, phone, avatar_url }
+  PR->>DB: UPDATE profiles\nSET name, phone, avatar_url
+  DB-->>PR: success
+  PR-->>PF: 200
+  PF-->>U: "Profile updated"

@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> Idle
+  Idle --> Selecting : user clicks / keyboard Enter·Space
+  Selecting --> Validating : file chosen
+  Validating --> Error : size > 2MB or wrong type
+  Validating --> Uploading : valid file
+  Error --> Idle : user dismisses
+  Uploading --> Preview : upload success\nonUpload(url) called
+  Uploading --> Error : upload failed
+  Preview --> Selecting : user clicks change
+  Preview --> Removed : user clicks remove
+  Removed --> Idle

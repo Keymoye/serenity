@@ -1,0 +1,15 @@
+flowchart TD
+  subgraph "Two-step query pattern"
+    A["countConfirmedBookingsWithSlotBetween\nPostgREST cannot filter\non related table columns"]
+    B["Step 1: fetch time_slot IDs\nin date range\n.select('id').gte('start_time')"]
+    C["Step 2: count bookings\n.select().in('time_slot_id', slotIds)"]
+    A --> B --> C
+  end
+
+  subgraph "Parallel metrics pattern"
+    D["getAdminMetrics()\navoid sequential DB calls"]
+    E["Promise.all batch 1\nbookingsThisMonth\nupcomingToday\ntotalRevenue"]
+    F["Promise.all batch 2\ntotalCustomers\nunreadMessages\ntotalServices"]
+    D --> E
+    D --> F
+  end

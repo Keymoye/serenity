@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant P as /admin/page.tsx
+  participant S as admin.service.ts
+  participant DB as Supabase DB
+
+  P->>S: getAdminMetrics()
+  Note over S: Promise.all — parallel batches
+  par Batch 1
+    S->>DB: count bookings this month
+    S->>DB: count upcoming today
+    S->>DB: sum revenue this month
+  and Batch 2
+    S->>DB: count total customers
+    S->>DB: count unread messages
+    S->>DB: count total services
+  end
+  DB-->>S: all results
+  S-->>P: AdminMetrics object
+  P->>P: render metric cards
